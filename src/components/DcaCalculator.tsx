@@ -155,7 +155,7 @@ export default function DcaCalculator({ defaultCoin }: Props) {
     : []
 
   const breakEven = result && result.totalCoins > 0
-    ? calculateBreakEven(result.totalInvested, result.totalCoins)
+    ? calculateBreakEven(result.totalInvested, result.totalCoins, 0.22)
     : null
 
   const isProfit = result && result.roi >= 0
