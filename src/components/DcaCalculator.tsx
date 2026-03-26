@@ -166,6 +166,12 @@ export default function DcaCalculator({ defaultCoin }: Props) {
 
   return (
     <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold mb-2">{coin.name} DCA Calculator</h1>
+        <p className="text-gray-400">
+          See exactly how much you&apos;d have if you dollar cost averaged into {coin.name}.
+        </p>
+      </div>
       {/* Form */}
       <div className="bg-gray-900 rounded-2xl p-6 space-y-4">
         {/* Coin tabs */}
@@ -313,8 +319,8 @@ export default function DcaCalculator({ defaultCoin }: Props) {
           {chartData.length > 0 && (
             <div className="bg-gray-900 rounded-2xl p-4">
               <h3 className="text-sm text-gray-400 mb-4">Portfolio Value Over Time</h3>
-              <div className="h-64 sm:h-72">
-                <ResponsiveContainer width="100%" height="100%">
+              <div>
+                <ResponsiveContainer width="100%" height={288}>
                   <AreaChart data={chartData}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
                     <XAxis

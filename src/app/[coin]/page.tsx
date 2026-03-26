@@ -68,12 +68,6 @@ export default async function CoinPage({ params }: Props) {
       <JsonLd coin={coin} />
       <main className="min-h-screen bg-gray-950 text-white">
         <div className="max-w-4xl mx-auto px-4 py-8">
-          <h1 className="text-3xl font-bold mb-2">
-            {coin.name} DCA Calculator
-          </h1>
-          <p className="text-gray-400 mb-8">
-            See exactly how much you&apos;d have if you dollar cost averaged into {coin.name}.
-          </p>
           <DcaCalculator defaultCoin={coin} />
         </div>
       </main>
