@@ -8,6 +8,10 @@ export default function sitemap(): MetadataRoute.Sitemap {
   const pages: MetadataRoute.Sitemap = [
     // Homepage
     { url: base, lastModified: now, changeFrequency: 'weekly', priority: 1 },
+    // Static pages
+    { url: `${base}/about`, lastModified: now, changeFrequency: 'monthly', priority: 0.3 },
+    { url: `${base}/privacy`, lastModified: now, changeFrequency: 'monthly', priority: 0.2 },
+    { url: `${base}/blog`, lastModified: now, changeFrequency: 'weekly', priority: 0.6 },
   ]
 
   // Coin calculator pages (en + ko)

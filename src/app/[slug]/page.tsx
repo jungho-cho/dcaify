@@ -1,8 +1,9 @@
 import { notFound } from 'next/navigation'
 import { Metadata } from 'next'
 import Link from 'next/link'
-import { getCoinBySlug, SUPPORTED_COINS, getComparisonPairs, TOP_COINS_FOR_COMPARISON } from '@/lib/coins'
+import { getCoinBySlug, SUPPORTED_COINS, getComparisonPairs } from '@/lib/coins'
 import DcaCalculator from '@/components/DcaCalculator'
+import Nav from '@/components/Nav'
 
 function JsonLd({ coin }: { coin: { name: string; symbol: string; slug: string } }) {
   const schema = {
@@ -94,6 +95,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 // --- Comparison Page Component ---
 function ComparisonPage({ coin1, coin2, slug }: { coin1: typeof SUPPORTED_COINS[0]; coin2: typeof SUPPORTED_COINS[0]; slug: string }) {
   return (
+    <>
+    <Nav />
     <main className="min-h-screen bg-gray-950 text-white">
       <div className="max-w-5xl mx-auto px-4 py-8">
         <h1 className="text-3xl font-bold mb-2">{coin1.name} vs {coin2.name} DCA Comparison</h1>
@@ -126,6 +129,7 @@ function ComparisonPage({ coin1, coin2, slug }: { coin1: typeof SUPPORTED_COINS[
         </div>
       </div>
     </main>
+    </>
   )
 }
 
@@ -156,6 +160,7 @@ export default async function SlugPage({ params }: Props) {
   return (
     <>
       <JsonLd coin={coin} />
+      <Nav />
       <main className="min-h-screen bg-gray-950 text-white">
         <div className="max-w-4xl mx-auto px-4 py-8">
           <DcaCalculator defaultCoin={coin} relatedCoins={relatedCoins} />

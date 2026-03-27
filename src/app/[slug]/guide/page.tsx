@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation'
 import { Metadata } from 'next'
 import Link from 'next/link'
 import { getCoinBySlug, SUPPORTED_COINS } from '@/lib/coins'
+import Nav from '@/components/Nav'
 
 interface Props {
   params: Promise<{ slug: string }>
@@ -55,7 +56,42 @@ export default async function GuidePage({ params }: Props) {
     (c) => c.category === coin.category && c.slug !== coin.slug,
   ).slice(0, 5)
 
+  // FAQ JSON-LD for rich snippets
+  const faqSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: [
+      {
+        '@type': 'Question',
+        name: `What is ${coin.name} DCA?`,
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: `Dollar cost averaging (DCA) into ${coin.name} (${coin.symbol}) means investing a fixed amount of money at regular intervals regardless of price. This removes the need to time the market.`,
+        },
+      },
+      {
+        '@type': 'Question',
+        name: `Why should I DCA into ${coin.name}?`,
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: `DCA reduces timing risk by averaging your purchase price over time. It removes emotional decision-making and is accessible — you don't need a large lump sum to start.`,
+        },
+      },
+      {
+        '@type': 'Question',
+        name: `How do I calculate my ${coin.name} DCA returns?`,
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: `Use the DCAify ${coin.name} DCA Calculator at dcaify.com/${coin.slug}. Enter your investment amount, frequency, and date range to see your historical returns.`,
+        },
+      },
+    ],
+  }
+
   return (
+    <>
+    <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />
+    <Nav />
     <main className="min-h-screen bg-gray-950 text-white">
       <div className="max-w-[65ch] mx-auto px-4 py-8">
         <nav className="mb-8 text-sm text-gray-400">
@@ -161,5 +197,6 @@ export default async function GuidePage({ params }: Props) {
         )}
       </div>
     </main>
+    </>
   )
 }

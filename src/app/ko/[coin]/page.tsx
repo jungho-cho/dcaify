@@ -3,6 +3,7 @@ import { Metadata } from 'next'
 import Link from 'next/link'
 import { getCoinBySlug, SUPPORTED_COINS } from '@/lib/coins'
 import DcaCalculator from '@/components/DcaCalculator'
+import Nav from '@/components/Nav'
 
 interface Props {
   params: Promise<{ coin: string }>
@@ -57,6 +58,8 @@ export default async function KoCoinPage({ params }: Props) {
   ).slice(0, 5)
 
   return (
+    <>
+    <Nav lang="ko" />
     <main className="min-h-screen bg-gray-950 text-white">
       <div className="max-w-4xl mx-auto px-4 py-8">
         <DcaCalculator defaultCoin={coin} lang="ko" relatedCoins={relatedCoins} />
@@ -76,5 +79,6 @@ export default async function KoCoinPage({ params }: Props) {
         </div>
       </div>
     </main>
+    </>
   )
 }
