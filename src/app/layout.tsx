@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { DM_Sans, Geist_Mono } from "next/font/google";
-import Link from "next/link";
+import Footer from "@/components/Footer";
 import "./globals.css";
 
 const dmSans = DM_Sans({
@@ -60,14 +60,11 @@ export default function RootLayout({
       className={`${dmSans.variable} ${geistMono.variable} h-full antialiased dark`}
     >
       <head>
-        {/* Satoshi — display font from Fontshare */}
         <link
           href="https://api.fontshare.com/v2/css?f[]=satoshi@700&display=swap"
           rel="stylesheet"
         />
-        {/* Naver Webmaster */}
         <meta name="naver-site-verification" content="a0f8f58a53d5fc9aee6a53b4f4b242ae061fa4a0" />
-        {/* GA4 */}
         <script async src="https://www.googletagmanager.com/gtag/js?id=G-6835L1T846" />
         <script
           dangerouslySetInnerHTML={{
@@ -80,17 +77,7 @@ export default function RootLayout({
         style={{ background: 'var(--bg)', color: 'var(--text)' }}
       >
         {children}
-        <footer
-          className="py-6 text-center text-xs mt-auto"
-          style={{ borderTop: '1px solid var(--border)', color: 'var(--text-faint)' }}
-        >
-          <div className="flex justify-center gap-4 mb-2">
-            <Link href="/about" className="hover:text-[var(--text-muted)]">About</Link>
-            <Link href="/privacy" className="hover:text-[var(--text-muted)]">Privacy</Link>
-            <Link href="/blog" className="hover:text-[var(--text-muted)]">Blog</Link>
-          </div>
-          <p>&copy; {new Date().getFullYear()} DCAify. Not financial advice.</p>
-        </footer>
+        <Footer />
       </body>
     </html>
   );
