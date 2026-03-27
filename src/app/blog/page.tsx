@@ -25,7 +25,7 @@ async function getPosts(): Promise<BlogPost[]> {
   return data ?? []
 }
 
-export const revalidate = 3600 // revalidate every hour
+export const revalidate = 3600
 
 export default async function BlogPage() {
   const posts = await getPosts()
@@ -35,24 +35,22 @@ export default async function BlogPage() {
   return (
     <>
       <Nav />
-      <main className="min-h-screen bg-gray-950 text-white">
+      <main className="min-h-screen">
         <div className="max-w-4xl mx-auto px-4 py-12">
-          <h1 className="text-3xl font-bold mb-2">Blog</h1>
-          <p className="text-gray-400 mb-10">DCA guides and crypto investing tips</p>
+          <h1 className="text-3xl font-bold mb-2" style={{ fontFamily: 'var(--font-display)' }}>Blog</h1>
+          <p className="mb-10" style={{ color: 'var(--text-muted)' }}>DCA guides and crypto investing tips</p>
 
           {enPosts.length > 0 && (
             <section className="mb-12">
               <h2 className="text-xl font-semibold mb-4">English</h2>
               <div className="space-y-4">
                 {enPosts.map((post) => (
-                  <Link
-                    key={post.slug}
-                    href={`/blog/${post.slug}`}
-                    className="block rounded-xl border border-gray-800 bg-gray-900 p-5 hover:border-blue-500 transition-colors"
-                  >
+                  <Link key={post.slug} href={`/blog/${post.slug}`}
+                    className="block p-5 transition-all duration-150 hover:translate-x-1"
+                    style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)' }}>
                     <h3 className="text-lg font-medium mb-1">{post.title}</h3>
-                    <p className="text-sm text-gray-400">{post.description}</p>
-                    <p className="text-xs text-gray-600 mt-2">
+                    <p className="text-sm" style={{ color: 'var(--text-muted)' }}>{post.description}</p>
+                    <p className="text-xs mt-2" style={{ color: 'var(--text-faint)' }}>
                       {new Date(post.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
                     </p>
                   </Link>
@@ -66,14 +64,12 @@ export default async function BlogPage() {
               <h2 className="text-xl font-semibold mb-4">한국어</h2>
               <div className="space-y-4">
                 {koPosts.map((post) => (
-                  <Link
-                    key={post.slug}
-                    href={`/blog/${post.slug}`}
-                    className="block rounded-xl border border-gray-800 bg-gray-900 p-5 hover:border-blue-500 transition-colors"
-                  >
+                  <Link key={post.slug} href={`/blog/${post.slug}`}
+                    className="block p-5 transition-all duration-150 hover:translate-x-1"
+                    style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)' }}>
                     <h3 className="text-lg font-medium mb-1">{post.title}</h3>
-                    <p className="text-sm text-gray-400">{post.description}</p>
-                    <p className="text-xs text-gray-600 mt-2">
+                    <p className="text-sm" style={{ color: 'var(--text-muted)' }}>{post.description}</p>
+                    <p className="text-xs mt-2" style={{ color: 'var(--text-faint)' }}>
                       {new Date(post.created_at).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })}
                     </p>
                   </Link>
@@ -83,7 +79,7 @@ export default async function BlogPage() {
           )}
 
           {posts.length === 0 && (
-            <p className="text-gray-500">No posts yet. Check back soon!</p>
+            <p style={{ color: 'var(--text-faint)' }}>No posts yet. Check back soon!</p>
           )}
         </div>
       </main>

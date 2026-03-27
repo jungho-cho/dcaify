@@ -42,3 +42,24 @@ body {
 .tabular-nums {
   font-variant-numeric: tabular-nums;
 }
+
+/* Motion — minimal-functional transitions */
+a, button, input, select {
+  transition: color 150ms ease-out, background-color 150ms ease-out, border-color 150ms ease-out, transform 150ms ease-out, opacity 150ms ease-out;
+}
+
+a:hover {
+  color: var(--text);
+}
+
+/* Subtle hover lift for card-like links */
+a[class*="block"]:hover,
+a[class*="flex"]:hover {
+  border-color: var(--accent) !important;
+}
+
+/* Focus visible for keyboard navigation */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}

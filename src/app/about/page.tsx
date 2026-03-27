@@ -11,65 +11,65 @@ export default function AboutPage() {
   return (
     <>
       <Nav />
-      <main className="min-h-screen bg-gray-950 text-white">
+      <main className="min-h-screen">
         <div className="max-w-[65ch] mx-auto px-4 py-12">
-          <h1 className="text-3xl font-bold mb-6">About DCAify</h1>
+          <h1 className="text-3xl font-bold mb-6" style={{ fontFamily: 'var(--font-display)' }}>About DCAify</h1>
 
-          <div className="space-y-6 text-gray-300 leading-relaxed">
+          <div className="space-y-6 leading-relaxed" style={{ color: 'var(--text-muted)' }}>
             <p>
               DCAify is a free, open-source crypto dollar cost averaging (DCA) calculator.
               We help investors see exactly how their DCA strategy would have performed
               historically across 29+ cryptocurrencies.
             </p>
 
-            <h2 className="text-xl font-semibold text-white">What We Do</h2>
+            <h2 className="text-xl font-semibold" style={{ color: 'var(--text)' }}>What We Do</h2>
             <p>
-              Enter your investment amount, frequency, and date range — and we show you
+              Enter your investment amount, frequency, and date range, and we show you
               the results: total invested, portfolio value, ROI percentage, and a visual
               chart of your portfolio growth over time. We also calculate break-even prices,
               including Korean tax considerations.
             </p>
 
-            <h2 className="text-xl font-semibold text-white">Our Data</h2>
+            <h2 className="text-xl font-semibold" style={{ color: 'var(--text)' }}>Our Data</h2>
             <p>
               All price data comes directly from the{' '}
-              <a href="https://www.binance.com" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">
+              <a href="https://www.binance.com" target="_blank" rel="noopener noreferrer" className="hover:underline" style={{ color: 'var(--accent)' }}>
                 Binance API
               </a>
               , one of the world&apos;s largest cryptocurrency exchanges. We use daily closing
               prices (USDT pairs) to ensure accuracy.
             </p>
 
-            <h2 className="text-xl font-semibold text-white">Supported Coins</h2>
+            <h2 className="text-xl font-semibold" style={{ color: 'var(--text)' }}>Supported Coins</h2>
             <p>
               We support 29+ cryptocurrencies including Bitcoin (BTC), Ethereum (ETH),
               Solana (SOL), BNB, XRP, Cardano (ADA), Dogecoin (DOGE), and many more.
-              Visit our <Link href="/" className="text-blue-400 hover:underline">homepage</Link> to
+              Visit our <Link href="/" className="hover:underline" style={{ color: 'var(--accent)' }}>homepage</Link> to
               see the full list.
             </p>
 
-            <h2 className="text-xl font-semibold text-white">Languages</h2>
+            <h2 className="text-xl font-semibold" style={{ color: 'var(--text)' }}>Languages</h2>
             <p>
               DCAify is available in English and Korean (한국어). Our Korean version includes
               tax analysis for the Korean cryptocurrency capital gains tax (22% rate with
               2.5M KRW basic deduction).
             </p>
 
-            <h2 className="text-xl font-semibold text-white">Disclaimer</h2>
-            <p className="text-sm text-gray-400">
+            <h2 className="text-xl font-semibold" style={{ color: 'var(--text)' }}>Disclaimer</h2>
+            <p className="text-sm" style={{ color: 'var(--text-faint)' }}>
               DCAify is an educational tool for informational purposes only. It does not
               constitute financial, investment, or tax advice. Past performance does not
               guarantee future results. Cryptocurrency investments carry significant risk
               and you may lose your entire investment. Always do your own research and
               consult a qualified financial advisor before making investment decisions.
-              Tax calculations are estimates — consult a tax professional for your specific
+              Tax calculations are estimates, consult a tax professional for your specific
               situation.
             </p>
 
-            <h2 className="text-xl font-semibold text-white">Contact</h2>
+            <h2 className="text-xl font-semibold" style={{ color: 'var(--text)' }}>Contact</h2>
             <p>
               Questions or feedback? Reach us at{' '}
-              <a href="mailto:hello@dcaify.com" className="text-blue-400 hover:underline">
+              <a href="mailto:hello@dcaify.com" className="hover:underline" style={{ color: 'var(--accent)' }}>
                 hello@dcaify.com
               </a>
             </p>

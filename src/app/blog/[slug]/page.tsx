@@ -60,7 +60,7 @@ function renderContent(content: string) {
     const Tag = listType === 'ol' ? 'ol' : 'ul'
     const cls = listType === 'ol' ? 'list-decimal' : 'list-disc'
     elements.push(
-      <Tag key={key++} className={`${cls} list-inside text-gray-300 leading-relaxed space-y-1 mb-4`}>
+      <Tag key={key++} className={`${cls} list-inside text-[var(--text-muted)] leading-relaxed space-y-1 mb-4`}>
         {listItems.map((item, i) => <li key={i} dangerouslySetInnerHTML={{ __html: parseInline(item) }} />)}
       </Tag>
     )
@@ -71,8 +71,8 @@ function renderContent(content: string) {
   function parseInline(text: string): string {
     return text
       .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-      .replace(/\[(.+?)\]\((.+?)\)/g, '<a href="$2" class="text-blue-400 hover:underline">$1</a>')
-      .replace(/`(.+?)`/g, '<code class="bg-gray-800 px-1 rounded text-sm">$1</code>')
+      .replace(/\[(.+?)\]\((.+?)\)/g, '<a href="$2" class="text-[var(--accent)] hover:underline">$1</a>')
+      .replace(/`(.+?)`/g, '<code class="bg-[var(--surface)] px-1 rounded text-sm">$1</code>')
   }
 
   for (const line of lines) {
@@ -80,10 +80,10 @@ function renderContent(content: string) {
 
     if (trimmed.startsWith('## ')) {
       flushList()
-      elements.push(<h2 key={key++} className="text-2xl font-semibold text-white mt-8 mb-4">{trimmed.slice(3)}</h2>)
+      elements.push(<h2 key={key++} className="text-2xl font-semibold text-[var(--text)] mt-8 mb-4">{trimmed.slice(3)}</h2>)
     } else if (trimmed.startsWith('### ')) {
       flushList()
-      elements.push(<h3 key={key++} className="text-xl font-semibold text-white mt-6 mb-3">{trimmed.slice(4)}</h3>)
+      elements.push(<h3 key={key++} className="text-xl font-semibold text-[var(--text)] mt-6 mb-3">{trimmed.slice(4)}</h3>)
     } else if (trimmed.startsWith('- ')) {
       if (listType !== 'ul') flushList()
       listType = 'ul'
@@ -94,15 +94,15 @@ function renderContent(content: string) {
       listItems.push(trimmed.replace(/^\d+\.\s/, ''))
     } else if (trimmed === '---') {
       flushList()
-      elements.push(<hr key={key++} className="border-gray-800 my-8" />)
+      elements.push(<hr key={key++} className="border-[var(--border)] my-8" />)
     } else if (trimmed.startsWith('*') && trimmed.endsWith('*') && !trimmed.startsWith('**')) {
       flushList()
-      elements.push(<p key={key++} className="text-gray-400 italic text-sm" dangerouslySetInnerHTML={{ __html: parseInline(trimmed.slice(1, -1)) }} />)
+      elements.push(<p key={key++} className="text-[var(--text-muted)] italic text-sm" dangerouslySetInnerHTML={{ __html: parseInline(trimmed.slice(1, -1)) }} />)
     } else if (trimmed === '') {
       flushList()
     } else {
       flushList()
-      elements.push(<p key={key++} className="text-gray-300 leading-relaxed mb-4" dangerouslySetInnerHTML={{ __html: parseInline(trimmed) }} />)
+      elements.push(<p key={key++} className="text-[var(--text-muted)] leading-relaxed mb-4" dangerouslySetInnerHTML={{ __html: parseInline(trimmed) }} />)
     }
   }
   flushList()
@@ -132,18 +132,18 @@ export default async function BlogPostPage({ params }: Props) {
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <Nav lang={isKo ? 'ko' : 'en'} />
-      <main className="min-h-screen bg-gray-950 text-white">
+      <main className="min-h-screen bg-gray-950 text-[var(--text)]">
         <article className="max-w-[65ch] mx-auto px-4 py-12">
-          <nav className="mb-8 text-sm text-gray-400">
-            <Link href="/" className="hover:text-white">Home</Link>
+          <nav className="mb-8 text-sm text-[var(--text-muted)]">
+            <Link href="/" className="hover:text-[var(--text)]">Home</Link>
             {' / '}
-            <Link href="/blog" className="hover:text-white">Blog</Link>
+            <Link href="/blog" className="hover:text-[var(--text)]">Blog</Link>
             {' / '}
-            <span className="text-white">{post.title.length > 40 ? post.title.slice(0, 40) + '…' : post.title}</span>
+            <span className="text-[var(--text)]">{post.title.length > 40 ? post.title.slice(0, 40) + '…' : post.title}</span>
           </nav>
 
           <h1 className="text-3xl font-bold mb-4">{post.title}</h1>
-          <p className="text-gray-500 text-sm mb-8">
+          <p className="text-[var(--text-faint)] text-sm mb-8">
             {new Date(post.created_at).toLocaleDateString(isKo ? 'ko-KR' : 'en-US', {
               year: 'numeric', month: 'long', day: 'numeric',
             })}

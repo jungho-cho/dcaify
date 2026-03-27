@@ -23,17 +23,19 @@ export default function Home() {
       <Nav />
       <main className="min-h-screen">
         <div className="max-w-4xl mx-auto px-4 py-8">
-          <h1 className="text-4xl sm:text-5xl font-bold text-center mt-12 mb-3" style={{ fontFamily: 'var(--font-display)' }}>
-            <span style={{ color: 'var(--accent)' }}>DCA</span>ify
-          </h1>
-          <p className="text-xl text-center mb-2" style={{ color: 'var(--text)' }}>
-            What if you had invested $100/month in crypto?
-          </p>
-          <p className="text-sm text-center mb-10" style={{ color: 'var(--text-faint)' }}>
-            Calculate returns for 29+ coins with real Binance price data
-          </p>
+          <div className="mt-12 mb-10">
+            <h1 className="text-4xl sm:text-5xl font-bold mb-3" style={{ fontFamily: 'var(--font-display)' }}>
+              <span style={{ color: 'var(--accent)' }}>DCA</span>ify
+            </h1>
+            <p className="text-xl mb-2" style={{ color: 'var(--text)' }}>
+              What if you had invested $100/month in crypto?
+            </p>
+            <p className="text-sm" style={{ color: 'var(--text-faint)' }}>
+              Calculate returns for 29+ coins with real Binance price data
+            </p>
+          </div>
 
-          <div className="max-w-md mx-auto mb-10">
+          <div className="max-w-lg mb-10">
             <input
               type="text"
               placeholder="Search coins... (e.g. Bitcoin, ETH, Solana)"
