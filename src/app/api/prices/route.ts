@@ -63,8 +63,9 @@ async function fetchYearFromBinance(
     : new Date(`${year}-12-31T23:59:59Z`).getTime()
 
   // Binance daily klines, limit 1000 (365 days fits comfortably)
-  // Try api.binance.com first, fall back to api1/api2/api3 mirrors if blocked (US regions)
+  // data-api.binance.vision works from US regions where api.binance.com is geo-blocked
   const baseUrls = [
+    'https://data-api.binance.vision',
     'https://api.binance.com',
     'https://api1.binance.com',
     'https://api2.binance.com',
