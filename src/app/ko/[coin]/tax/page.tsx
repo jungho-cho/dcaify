@@ -3,6 +3,7 @@ import { Metadata } from 'next'
 import Link from 'next/link'
 import { getCoinBySlug, SUPPORTED_COINS } from '@/lib/coins'
 import DcaCalculator from '@/components/DcaCalculator'
+import Nav from '@/components/Nav'
 
 interface Props {
   params: Promise<{ coin: string }>
@@ -37,10 +38,12 @@ export default async function KoTaxPage({ params }: Props) {
   if (!coin) notFound()
 
   return (
+    <>
+    <Nav lang="ko" />
     <main className="min-h-screen bg-gray-950 text-white">
       <div className="max-w-4xl mx-auto px-4 py-8">
         <nav className="mb-8 text-sm text-gray-400">
-          <Link href="/" className="hover:text-white">홈</Link>
+          <Link href="/ko" className="hover:text-white">홈</Link>
           {' / '}
           <Link href={`/ko/${coin.slug}`} className="hover:text-white">{coin.name} 계산기</Link>
           {' / '}
@@ -103,5 +106,6 @@ export default async function KoTaxPage({ params }: Props) {
         </div>
       </div>
     </main>
+    </>
   )
 }

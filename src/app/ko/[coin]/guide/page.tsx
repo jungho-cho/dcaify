@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation'
 import { Metadata } from 'next'
 import Link from 'next/link'
 import { getCoinBySlug, SUPPORTED_COINS } from '@/lib/coins'
+import Nav from '@/components/Nav'
 
 interface Props {
   params: Promise<{ coin: string }>
@@ -56,6 +57,8 @@ export default async function KoGuidePage({ params }: Props) {
   ).slice(0, 5)
 
   return (
+    <>
+    <Nav lang="ko" />
     <main className="min-h-screen bg-gray-950 text-white">
       <div className="max-w-[65ch] mx-auto px-4 py-8">
         <nav className="mb-8 text-sm text-gray-400">
@@ -159,5 +162,6 @@ export default async function KoGuidePage({ params }: Props) {
         )}
       </div>
     </main>
+    </>
   )
 }

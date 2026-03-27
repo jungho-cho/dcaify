@@ -42,7 +42,10 @@ export default function DcaCalculator({ defaultCoin, lang = 'en', relatedCoins }
 
   const [amount, setAmount] = useState('100')
   const [frequency, setFrequency] = useState<Frequency>('monthly')
-  const [startDate, setStartDate] = useState('2020-01-01')
+  const [startDate, setStartDate] = useState(() => {
+    // Default to listing date or 2020-01-01, whichever is later
+    return coin.listingDate > '2020-01-01' ? coin.listingDate : '2020-01-01'
+  })
   const [endDate, setEndDate] = useState(new Date().toISOString().slice(0, 10))
 
   const [uiState, setUiState] = useState<UiState>('initial')
