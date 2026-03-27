@@ -1,6 +1,14 @@
 @import "tailwindcss";
 
 /* DCAify Design System — see DESIGN.md */
+
+@theme inline {
+  --color-background: #0B0F19;
+  --color-foreground: #E2E8F0;
+  --font-sans: 'DM Sans', system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono);
+}
+
 :root {
   --bg: #0B0F19;
   --surface: #141926;
@@ -16,9 +24,8 @@
   --loss-bg: rgba(69, 10, 10, 0.2);
   --warning: #FBBF24;
 
-  --font-display: 'Satoshi', var(--font-geist-sans), system-ui, sans-serif;
-  --font-body: 'DM Sans', var(--font-geist-sans), system-ui, sans-serif;
-  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+  --font-display: 'Satoshi', system-ui, sans-serif;
+  --font-body: 'DM Sans', system-ui, sans-serif;
 
   --radius-sm: 6px;
   --radius-md: 8px;
@@ -26,21 +33,12 @@
   --radius-xl: 16px;
 }
 
-@theme inline {
-  --color-background: var(--bg);
-  --color-foreground: var(--text);
-  --font-sans: var(--font-body);
-  --font-mono: var(--font-mono);
-}
-
 body {
-  background: var(--bg);
-  color: var(--text);
-  font-family: var(--font-body);
+  background: #0B0F19;
+  color: #E2E8F0;
+  font-family: 'DM Sans', system-ui, sans-serif;
 }
 
-/* Tabular numbers for financial data */
 .tabular-nums {
   font-variant-numeric: tabular-nums;
-  font-family: var(--font-mono);
 }
