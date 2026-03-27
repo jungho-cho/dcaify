@@ -308,6 +308,91 @@ export default function DcaCalculator({ defaultCoin, lang = 'en', relatedCoins }
         </div>
       )}
 
+      {/* Result explanation — only after calculation */}
+      {uiState === 'success' && result && (
+        <div className="p-5 space-y-3 text-sm leading-relaxed" style={{ background: ds.surface, border: `1px solid ${ds.border}`, borderRadius: 'var(--radius-lg)', color: ds.textMuted }}>
+          <h3 className="font-semibold" style={{ color: 'var(--text)' }}>
+            {lang === 'ko' ? '결과 해석' : 'Understanding Your Results'}
+          </h3>
+          <ul className="space-y-2">
+            <li>
+              <strong style={{ color: 'var(--text)' }}>{lang === 'ko' ? '수익률 (ROI)' : 'Return (ROI)'}</strong>{' '}
+              {lang === 'ko'
+                ? `— 총 투자금 대비 수익 비율입니다. ${formatPct(result.roi)}는 ${formatUsd(result.totalInvested)}를 투자해서 ${formatUsd(result.currentValue)}가 되었다는 의미입니다.`
+                : `— The percentage gain or loss on your total investment. ${formatPct(result.roi)} means your ${formatUsd(result.totalInvested)} became ${formatUsd(result.currentValue)}.`}
+            </li>
+            {breakEven && (
+              <li>
+                <strong style={{ color: 'var(--text)' }}>{lang === 'ko' ? '손익분기점' : 'Break-even Price'}</strong>{' '}
+                {lang === 'ko'
+                  ? `— ${coin.symbol} 가격이 ${formatUsd(breakEven.breakEvenPrice)}에 도달하면 원금을 회수할 수 있습니다.`
+                  : `— If ${coin.symbol} reaches ${formatUsd(breakEven.breakEvenPrice)}, you recover your total investment.`}
+              </li>
+            )}
+            <li>
+              <strong style={{ color: 'var(--text)' }}>{lang === 'ko' ? '매수 횟수' : 'Purchases'}</strong>{' '}
+              {lang === 'ko'
+                ? `— 선택한 기간 동안 ${result.purchases.length}번 매수했습니다. 각 매수마다 ${formatUsd(parseFloat(amount))}씩 투자했습니다.`
+                : `— You made ${result.purchases.length} purchases of ${formatUsd(parseFloat(amount))} each over the selected period.`}
+            </li>
+          </ul>
+        </div>
+      )}
+
+      {/* DCA Insight — always visible */}
+      <div className="p-5 space-y-4 text-sm leading-relaxed" style={{ background: ds.surface, border: `1px solid ${ds.border}`, borderRadius: 'var(--radius-lg)', color: ds.textMuted }}>
+        <h2 className="text-lg font-semibold" style={{ color: 'var(--text)', fontFamily: 'var(--font-display)' }}>
+          {lang === 'ko' ? `왜 ${coin.name}에 적립식 투자를 할까요?` : `Why DCA into ${coin.name}?`}
+        </h2>
+        <p>{coin.description[lang === 'ko' ? 'ko' : 'en']}</p>
+        <h3 className="font-semibold" style={{ color: 'var(--text)' }}>
+          {lang === 'ko' ? `${coin.name} 적립식 투자 시작하기` : `How to Start DCA into ${coin.name}`}
+        </h3>
+        <ol className="list-decimal list-inside space-y-1">
+          {lang === 'ko' ? (
+            <>
+              <li>암호화폐 거래소 (업비트, 빗썸, 바이낸스)에 가입합니다</li>
+              <li>매주 또는 매달 자동 매수를 설정하거나 직접 매수합니다</li>
+              <li>이 계산기로 수익을 추적하세요</li>
+            </>
+          ) : (
+            <>
+              <li>Sign up for a crypto exchange (Binance, Coinbase, Kraken)</li>
+              <li>Set up recurring buys or manually buy on a schedule</li>
+              <li>Track your returns with this calculator</li>
+            </>
+          )}
+        </ol>
+      </div>
+
+      {/* FAQ — always visible, with JSON-LD */}
+      <div className="p-5 space-y-4 text-sm leading-relaxed" style={{ background: ds.surface, border: `1px solid ${ds.border}`, borderRadius: 'var(--radius-lg)', color: ds.textMuted }}>
+        <h2 className="text-lg font-semibold" style={{ color: 'var(--text)', fontFamily: 'var(--font-display)' }}>
+          {lang === 'ko' ? '자주 묻는 질문' : 'Frequently Asked Questions'}
+        </h2>
+        {(lang === 'ko' ? [
+          { q: '적립식 투자(DCA)란 무엇인가요?', a: `적립식 투자(Dollar Cost Averaging)는 가격에 관계없이 정기적으로 일정 금액을 투자하는 전략입니다. 예를 들어 매달 10만 원씩 ${coin.name}을 매수하면, 고점과 저점 모두에서 매수하여 평균 매입 단가를 낮출 수 있습니다.` },
+          { q: `${coin.name}에 매달 얼마를 투자해야 하나요?`, a: '투자 금액은 개인의 재정 상황에 따라 다릅니다. 잃어도 괜찮은 금액부터 시작하세요. 많은 투자자들이 월 5만 원~50만 원 사이로 시작합니다. 중요한 건 금액보다 꾸준함입니다.' },
+          { q: 'DCA vs 일시불 투자, 뭐가 더 좋나요?', a: '통계적으로 일시불 투자가 약 66%의 경우 더 높은 수익을 냅니다. 하지만 DCA는 심리적으로 훨씬 쉽고, 목돈이 없어도 시작할 수 있으며, 변동성이 큰 암호화폐 시장에서 타이밍 리스크를 줄여줍니다.' },
+          { q: '언제 시작하는 게 가장 좋나요?', a: 'DCA의 핵심은 "가장 좋은 시작 시점은 이미 지났고, 두 번째로 좋은 시점은 지금"입니다. 시장 타이밍을 맞추려 하지 말고, 편안한 금액으로 오늘 시작하세요.' },
+          { q: '암호화폐 세금은 어떻게 되나요?', a: '한국에서는 암호화폐 양도소득에 22%(지방소득세 포함)의 세금이 부과될 예정이며, 연간 250만 원까지 기본공제가 적용됩니다. 이 계산기의 손익분기점 분석에서 세금을 고려한 가격을 확인할 수 있습니다.' },
+        ] : [
+          { q: 'What is Dollar Cost Averaging (DCA)?', a: `DCA is an investment strategy where you invest a fixed amount at regular intervals, regardless of price. For example, buying $100 of ${coin.name} every month means you buy at both highs and lows, averaging out your cost basis over time.` },
+          { q: `How much should I invest in ${coin.name} per month?`, a: 'The right amount depends on your financial situation. Start with an amount you can afford to lose. Many investors start with $50-$500 per month. Consistency matters more than the amount.' },
+          { q: 'Is DCA better than lump sum investing?', a: 'Statistically, lump sum investing outperforms DCA about 66% of the time. However, DCA is psychologically easier, requires no large upfront capital, and reduces timing risk in volatile markets like crypto.' },
+          { q: 'When is the best time to start DCA?', a: 'The best time to start was yesterday. The second best time is today. DCA removes the need to time the market, so there is no "perfect" entry point. Start with a comfortable amount and stay consistent.' },
+          { q: `What does the break-even price mean?`, a: `The break-even price is the minimum price ${coin.symbol} needs to reach for you to recover your total investment. If you see a break-even with tax (Korean pages), that accounts for the 22% capital gains tax.` },
+        ]).map((faq, i) => (
+          <details key={i} className="group">
+            <summary className="cursor-pointer font-medium py-2 list-none flex items-center gap-2" style={{ color: 'var(--text)' }}>
+              <span className="text-xs transition-transform group-open:rotate-90" style={{ color: ds.accent }}>▶</span>
+              {faq.q}
+            </summary>
+            <p className="pl-5 pb-2">{faq.a}</p>
+          </details>
+        ))}
+      </div>
+
       {/* Related coins */}
       {relatedCoins && relatedCoins.length > 0 && (
         <div className="p-4" style={{ background: ds.surface, border: `1px solid ${ds.border}`, borderRadius: 'var(--radius-lg)' }}>
