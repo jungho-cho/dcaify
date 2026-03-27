@@ -63,13 +63,29 @@ async function fetchYearFromBinance(
     : new Date(`${year}-12-31T23:59:59Z`).getTime()
 
   // Binance daily klines, limit 1000 (365 days fits comfortably)
-  const url = `https://api.binance.com/api/v3/klines?symbol=${binanceSymbol}&interval=1d&startTime=${startTime}&endTime=${endTime}&limit=1000`
+  // Try api.binance.com first, fall back to api1/api2/api3 mirrors if blocked (US regions)
+  const baseUrls = [
+    'https://api.binance.com',
+    'https://api1.binance.com',
+    'https://api2.binance.com',
+    'https://api3.binance.com',
+  ]
+  const path = `/api/v3/klines?symbol=${binanceSymbol}&interval=1d&startTime=${startTime}&endTime=${endTime}&limit=1000`
 
-  const res = await fetch(url, { next: { revalidate: 0 } })
+  let res: Response | null = null
+  for (const base of baseUrls) {
+    try {
+      res = await fetch(base + path, { next: { revalidate: 0 } })
+      if (res.ok) break
+    } catch {
+      continue
+    }
+  }
 
-  if (!res.ok) {
-    const err = new Error(`Binance ${res.status}`)
-    ;(err as any).status = res.status
+  if (!res || !res.ok) {
+    const status = res?.status ?? 0
+    const err = new Error(`Binance ${status}`)
+    ;(err as any).status = status
     throw err
   }
 

@@ -85,7 +85,7 @@ export default function KoHome() {
             </ul>
 
             <div className="flex flex-wrap gap-3 pt-4">
-              <Link href="/blog" className="text-blue-400 hover:underline">DCA 가이드 읽기 →</Link>
+              <Link href="/ko/blog" className="text-blue-400 hover:underline">DCA 가이드 읽기 →</Link>
               <Link href="/ko/btc/guide" className="text-blue-400 hover:underline">비트코인 적립식 투자 가이드 →</Link>
               <Link href="/ko/eth/guide" className="text-blue-400 hover:underline">이더리움 적립식 투자 가이드 →</Link>
               <Link href="/ko/btc/tax" className="text-blue-400 hover:underline">비트코인 세금 분석 →</Link>

@@ -25,10 +25,10 @@ export default function Nav({ lang = 'en' }: NavProps) {
           <Link href={home} className="hidden sm:block hover:text-[var(--text)] transition-colors">
             {isKo ? '코인 목록' : 'Coins'}
           </Link>
-          <Link href="/blog" className="hover:text-[var(--text)] transition-colors">
+          <Link href={isKo ? '/ko/blog' : '/blog'} className="hover:text-[var(--text)] transition-colors">
             {isKo ? '블로그' : 'Blog'}
           </Link>
-          <Link href="/about" className="hidden sm:block hover:text-[var(--text)] transition-colors">
+          <Link href={isKo ? '/ko/about' : '/about'} className="hidden sm:block hover:text-[var(--text)] transition-colors">
             {isKo ? '소개' : 'About'}
           </Link>
           {isKo ? (
