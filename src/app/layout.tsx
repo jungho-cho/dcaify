@@ -65,6 +65,8 @@ export default function RootLayout({
           href="https://api.fontshare.com/v2/css?f[]=satoshi@700&display=swap"
           rel="stylesheet"
         />
+        {/* Naver Webmaster */}
+        <meta name="naver-site-verification" content="a0f8f58a53d5fc9aee6a53b4f4b242ae061fa4a0" />
         {/* GA4 */}
         <script async src="https://www.googletagmanager.com/gtag/js?id=G-6835L1T846" />
         <script
