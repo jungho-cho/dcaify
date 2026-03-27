@@ -200,7 +200,7 @@ export default function DcaCalculator({ defaultCoin, lang = 'en', relatedCoins }
               min="1"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
-              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-blue-500"
+              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500"
               placeholder="100"
             />
           </div>
@@ -211,7 +211,7 @@ export default function DcaCalculator({ defaultCoin, lang = 'en', relatedCoins }
             <select
               value={frequency}
               onChange={(e) => setFrequency(e.target.value as Frequency)}
-              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-blue-500"
+              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500"
             >
               <option value="daily">{s.daily}</option>
               <option value="weekly">{s.weekly}</option>
@@ -228,7 +228,7 @@ export default function DcaCalculator({ defaultCoin, lang = 'en', relatedCoins }
               min={coin.listingDate}
               max={endDate}
               onChange={(e) => setStartDate(e.target.value)}
-              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-blue-500"
+              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500"
             />
           </div>
 
@@ -241,7 +241,7 @@ export default function DcaCalculator({ defaultCoin, lang = 'en', relatedCoins }
               min={startDate}
               max={new Date().toISOString().slice(0, 10)}
               onChange={(e) => setEndDate(e.target.value)}
-              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-blue-500"
+              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500"
             />
           </div>
         </div>
@@ -259,6 +259,17 @@ export default function DcaCalculator({ defaultCoin, lang = 'en', relatedCoins }
           {uiState === 'loading' ? s.calculating : s.calculateBtn}
         </button>
       </div>
+
+      {/* Initial state — motivate the user */}
+      {uiState === 'initial' && (
+        <div className="bg-gray-900/50 border border-gray-800 border-dashed rounded-2xl p-8 text-center">
+          <p className="text-gray-500 text-sm">
+            {lang === 'ko'
+              ? `위 설정을 확인하고 "DCA 수익 계산하기"를 눌러 ${coin.name} 적립식 투자 수익을 확인하세요.`
+              : `Set your preferences above and hit "Calculate" to see your ${coin.name} DCA returns.`}
+          </p>
+        </div>
+      )}
 
       {/* Skeleton loading */}
       {uiState === 'loading' && (
@@ -303,7 +314,18 @@ export default function DcaCalculator({ defaultCoin, lang = 'en', relatedCoins }
       {/* Results */}
       {uiState === 'success' && result && (
         <div className="space-y-4">
-          {/* Summary cards */}
+          {/* Hero result — the "whoa" moment */}
+          <div className={`rounded-2xl p-6 text-center ${isProfit ? 'bg-emerald-950/40 border border-emerald-900/50' : 'bg-red-950/40 border border-red-900/50'}`}>
+            <p className="text-sm text-gray-400 mb-1">{s.returnLabel}</p>
+            <p className={`text-4xl sm:text-5xl font-bold ${isProfit ? 'text-emerald-400' : 'text-red-400'}`}>
+              {formatPct(result.roi)}
+            </p>
+            <p className="text-gray-400 text-sm mt-2">
+              {formatUsd(result.totalInvested)} → {formatUsd(result.currentValue)}
+            </p>
+          </div>
+
+          {/* Detail cards */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div className="bg-gray-900 rounded-xl p-4">
               <p className="text-xs text-gray-400 mb-1">{s.totalInvested}</p>
@@ -314,23 +336,21 @@ export default function DcaCalculator({ defaultCoin, lang = 'en', relatedCoins }
               <p className="text-lg font-bold">{formatUsd(result.currentValue)}</p>
             </div>
             <div className="bg-gray-900 rounded-xl p-4">
-              <p className="text-xs text-gray-400 mb-1">{s.returnLabel}</p>
-              <p className={`text-lg font-bold ${isProfit ? 'text-green-400' : 'text-red-400'}`}>
-                {formatPct(result.roi)}
-              </p>
-            </div>
-            <div className="bg-gray-900 rounded-xl p-4">
               <p className="text-xs text-gray-400 mb-1">{coin.symbol} {s.accumulated}</p>
               <p className="text-lg font-bold">{result.totalCoins.toFixed(6)}</p>
             </div>
+            <div className="bg-gray-900 rounded-xl p-4">
+              <p className="text-xs text-gray-400 mb-1">{lang === 'ko' ? '매수 횟수' : 'Purchases'}</p>
+              <p className="text-lg font-bold">{result.purchases.length}</p>
+            </div>
           </div>
 
-          {/* Chart */}
+          {/* Chart — full bleed, no card wrapper */}
           {chartData.length > 0 && (
-            <div className="bg-gray-900 rounded-2xl p-4">
+            <div className="rounded-2xl p-4 -mx-1">
               <h3 className="text-sm text-gray-400 mb-4">{s.chartTitle}</h3>
               <div>
-                <ResponsiveContainer width="100%" height={288}>
+                <ResponsiveContainer width="100%" height={240} className="sm:!h-[288px]">
                   <AreaChart data={chartData}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
                     <XAxis

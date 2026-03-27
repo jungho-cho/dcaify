@@ -23,12 +23,14 @@ export default function Home() {
       <Nav />
       <main className="min-h-screen bg-gray-950 text-white">
         <div className="max-w-4xl mx-auto px-4 py-8">
-          <h1 className="text-4xl font-bold text-center mt-12 mb-4">
-            DCAify — Crypto DCA Calculator
+          <h1 className="text-4xl sm:text-5xl font-bold text-center mt-12 mb-3">
+            <span className="text-blue-500">DCA</span>ify
           </h1>
-          <p className="text-lg text-gray-400 text-center mb-10">
-            See exactly how much you&apos;d have if you dollar cost averaged into
-            crypto. Track returns for Bitcoin, Ethereum, Solana, and 25+ coins.
+          <p className="text-xl text-gray-300 text-center mb-2">
+            What if you had invested $100/month in crypto?
+          </p>
+          <p className="text-sm text-gray-500 text-center mb-10">
+            Calculate returns for 29+ coins with real Binance price data
           </p>
 
           <div className="max-w-md mx-auto mb-10">
@@ -41,17 +43,25 @@ export default function Home() {
             />
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-            {filtered.map((coin) => (
-              <Link
-                key={coin.slug}
-                href={`/${coin.slug}`}
-                className="flex flex-col items-center gap-2 rounded-lg border border-gray-800 bg-gray-900 p-4 transition hover:border-blue-500 hover:bg-gray-800"
-              >
-                <span className="text-xl font-semibold">{coin.symbol}</span>
-                <span className="text-sm text-gray-400">{coin.name}</span>
-              </Link>
-            ))}
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+            {filtered.map((coin, i) => {
+              const isTop = !query.trim() && i < 3
+              return (
+                <Link
+                  key={coin.slug}
+                  href={`/${coin.slug}`}
+                  className={`flex flex-col items-center gap-1 rounded-xl border p-4 transition hover:border-blue-500 hover:bg-gray-800 ${
+                    isTop
+                      ? 'border-blue-900/50 bg-blue-950/30 col-span-1 sm:col-span-1'
+                      : 'border-gray-800 bg-gray-900'
+                  }`}
+                >
+                  <span className={`font-bold ${isTop ? 'text-2xl text-blue-400' : 'text-lg'}`}>{coin.symbol}</span>
+                  <span className="text-xs text-gray-400">{coin.name}</span>
+                  {isTop && <span className="text-[10px] text-gray-600 mt-1">{coin.category}</span>}
+                </Link>
+              )
+            })}
           </div>
 
           {filtered.length === 0 && (
