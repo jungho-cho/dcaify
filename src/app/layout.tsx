@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { DM_Sans, Geist_Mono } from "next/font/google";
 import Link from "next/link";
 import "./globals.css";
 
-const geistSans = Geist({
+const dmSans = DM_Sans({
   variable: "--font-geist-sans",
   subsets: ["latin"],
+  weight: ["400", "500", "700"],
 });
 
 const geistMono = Geist_Mono({
@@ -56,15 +57,28 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased dark`}
+      className={`${dmSans.variable} ${geistMono.variable} h-full antialiased dark`}
     >
-      <body className="min-h-full flex flex-col bg-gray-950 text-white">
+      <head>
+        {/* Satoshi — display font from Fontshare */}
+        <link
+          href="https://api.fontshare.com/v2/css?f[]=satoshi@700&display=swap"
+          rel="stylesheet"
+        />
+      </head>
+      <body
+        className="min-h-full flex flex-col"
+        style={{ background: 'var(--bg)', color: 'var(--text)' }}
+      >
         {children}
-        <footer className="border-t border-gray-800 py-6 text-center text-xs text-gray-600 mt-auto">
+        <footer
+          className="py-6 text-center text-xs mt-auto"
+          style={{ borderTop: '1px solid var(--border)', color: 'var(--text-faint)' }}
+        >
           <div className="flex justify-center gap-4 mb-2">
-            <Link href="/about" className="hover:text-gray-400">About</Link>
-            <Link href="/privacy" className="hover:text-gray-400">Privacy</Link>
-            <Link href="/blog" className="hover:text-gray-400">Blog</Link>
+            <Link href="/about" className="hover:text-[var(--text-muted)]">About</Link>
+            <Link href="/privacy" className="hover:text-[var(--text-muted)]">Privacy</Link>
+            <Link href="/blog" className="hover:text-[var(--text-muted)]">Blog</Link>
           </div>
           <p>&copy; {new Date().getFullYear()} DCAify. Not financial advice.</p>
         </footer>

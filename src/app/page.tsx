@@ -21,15 +21,15 @@ export default function Home() {
   return (
     <>
       <Nav />
-      <main className="min-h-screen bg-gray-950 text-white">
+      <main className="min-h-screen">
         <div className="max-w-4xl mx-auto px-4 py-8">
-          <h1 className="text-4xl sm:text-5xl font-bold text-center mt-12 mb-3">
-            <span className="text-blue-500">DCA</span>ify
+          <h1 className="text-4xl sm:text-5xl font-bold text-center mt-12 mb-3" style={{ fontFamily: 'var(--font-display)' }}>
+            <span style={{ color: 'var(--accent)' }}>DCA</span>ify
           </h1>
-          <p className="text-xl text-gray-300 text-center mb-2">
+          <p className="text-xl text-center mb-2" style={{ color: 'var(--text)' }}>
             What if you had invested $100/month in crypto?
           </p>
-          <p className="text-sm text-gray-500 text-center mb-10">
+          <p className="text-sm text-center mb-10" style={{ color: 'var(--text-faint)' }}>
             Calculate returns for 29+ coins with real Binance price data
           </p>
 
@@ -39,7 +39,8 @@ export default function Home() {
               placeholder="Search coins... (e.g. Bitcoin, ETH, Solana)"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              className="w-full rounded-lg border border-gray-700 bg-gray-900 px-4 py-3 text-white placeholder-gray-500 focus:border-blue-500 focus:outline-none"
+              className="w-full px-4 py-3 focus:outline-none focus:ring-2 focus:ring-sky-500/40"
+              style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', color: 'var(--text)' }}
             />
           </div>
 
@@ -50,47 +51,47 @@ export default function Home() {
                 <Link
                   key={coin.slug}
                   href={`/${coin.slug}`}
-                  className={`flex flex-col items-center gap-1 rounded-xl border p-4 transition hover:border-blue-500 hover:bg-gray-800 ${
-                    isTop
-                      ? 'border-blue-900/50 bg-blue-950/30 col-span-1 sm:col-span-1'
-                      : 'border-gray-800 bg-gray-900'
-                  }`}
+                  className="flex flex-col items-center gap-1 p-4 transition"
+                  style={{
+                    background: isTop ? 'rgba(56, 189, 248, 0.05)' : 'var(--surface)',
+                    border: `1px solid ${isTop ? 'rgba(56, 189, 248, 0.2)' : 'var(--border)'}`,
+                    borderRadius: 'var(--radius-lg)',
+                  }}
                 >
-                  <span className={`font-bold ${isTop ? 'text-2xl text-blue-400' : 'text-lg'}`}>{coin.symbol}</span>
-                  <span className="text-xs text-gray-400">{coin.name}</span>
-                  {isTop && <span className="text-[10px] text-gray-600 mt-1">{coin.category}</span>}
+                  <span className="font-bold" style={{ fontSize: isTop ? '1.5rem' : '1.125rem', color: isTop ? 'var(--accent)' : 'var(--text)' }}>
+                    {coin.symbol}
+                  </span>
+                  <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{coin.name}</span>
+                  {isTop && <span className="text-[10px] mt-0.5" style={{ color: 'var(--text-faint)' }}>{coin.category}</span>}
                 </Link>
               )
             })}
           </div>
 
           {filtered.length === 0 && (
-            <p className="text-center text-gray-500 mt-8">
+            <p className="text-center mt-8" style={{ color: 'var(--text-faint)' }}>
               No coins found matching &quot;{query}&quot;
             </p>
           )}
 
-          {/* SEO content — visible to crawlers, helpful to users */}
-          <section className="mt-16 space-y-6 text-gray-400 text-sm leading-relaxed">
-            <h2 className="text-xl font-semibold text-white">What is Dollar Cost Averaging?</h2>
+          <section className="mt-16 space-y-6 text-sm leading-relaxed" style={{ color: 'var(--text-muted)' }}>
+            <h2 className="text-xl font-semibold" style={{ color: 'var(--text)' }}>What is Dollar Cost Averaging?</h2>
             <p>
               Dollar cost averaging (DCA) is an investment strategy where you invest a fixed
-              amount of money at regular intervals — weekly, biweekly, or monthly — regardless
-              of the asset&apos;s current price. This approach removes the stress of trying to time
-              the market and has historically proven effective for long-term wealth building in
-              volatile markets like cryptocurrency.
+              amount of money at regular intervals, regardless of the asset&apos;s current price.
+              This approach removes the stress of trying to time the market and has historically
+              proven effective for long-term wealth building in volatile markets like cryptocurrency.
             </p>
 
-            <h2 className="text-xl font-semibold text-white">How DCAify Works</h2>
+            <h2 className="text-xl font-semibold" style={{ color: 'var(--text)' }}>How DCAify Works</h2>
             <p>
               Choose any of our supported cryptocurrencies, set your investment amount and
               frequency, pick a historical date range, and instantly see your results.
               DCAify uses real price data from Binance to calculate your total invested amount,
-              portfolio value, return percentage, and a visual chart of your portfolio growth
-              over time.
+              portfolio value, return percentage, and a visual chart of your portfolio growth.
             </p>
 
-            <h2 className="text-xl font-semibold text-white">Features</h2>
+            <h2 className="text-xl font-semibold" style={{ color: 'var(--text)' }}>Features</h2>
             <ul className="list-disc list-inside space-y-1">
               <li>29+ supported cryptocurrencies with real Binance price data</li>
               <li>Daily, weekly, and monthly DCA frequency options</li>
@@ -102,13 +103,12 @@ export default function Home() {
             </ul>
 
             <div className="flex flex-wrap gap-3 pt-4">
-              <Link href="/blog" className="text-blue-400 hover:underline">Read our DCA guides →</Link>
-              <Link href="/btc/guide" className="text-blue-400 hover:underline">Bitcoin DCA Guide →</Link>
-              <Link href="/eth/guide" className="text-blue-400 hover:underline">Ethereum DCA Guide →</Link>
-              <Link href="/btc-vs-eth" className="text-blue-400 hover:underline">BTC vs ETH Comparison →</Link>
+              <Link href="/blog" className="hover:underline" style={{ color: 'var(--accent)' }}>Read our DCA guides →</Link>
+              <Link href="/btc/guide" className="hover:underline" style={{ color: 'var(--accent)' }}>Bitcoin DCA Guide →</Link>
+              <Link href="/eth/guide" className="hover:underline" style={{ color: 'var(--accent)' }}>Ethereum DCA Guide →</Link>
+              <Link href="/btc-vs-eth" className="hover:underline" style={{ color: 'var(--accent)' }}>BTC vs ETH Comparison →</Link>
             </div>
           </section>
-
         </div>
       </main>
     </>
