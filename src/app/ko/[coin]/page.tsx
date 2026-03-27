@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation'
 import { Metadata } from 'next'
+import Link from 'next/link'
 import { getCoinBySlug, SUPPORTED_COINS } from '@/lib/coins'
 import DcaCalculator from '@/components/DcaCalculator'
 
@@ -51,10 +52,28 @@ export default async function KoCoinPage({ params }: Props) {
 
   if (!coin) notFound()
 
+  const relatedCoins = SUPPORTED_COINS.filter(
+    (c) => c.category === coin.category && c.slug !== coin.slug,
+  ).slice(0, 5)
+
   return (
     <main className="min-h-screen bg-gray-950 text-white">
       <div className="max-w-4xl mx-auto px-4 py-8">
-        <DcaCalculator defaultCoin={coin} lang="ko" />
+        <DcaCalculator defaultCoin={coin} lang="ko" relatedCoins={relatedCoins} />
+        <div className="mt-6 text-center space-x-4">
+          <Link
+            href={`/ko/${coin.slug}/guide`}
+            className="text-blue-400 hover:underline text-sm"
+          >
+            {coin.name} 적립식 투자 가이드 →
+          </Link>
+          <Link
+            href={`/ko/${coin.slug}/tax`}
+            className="text-blue-400 hover:underline text-sm"
+          >
+            {coin.name} 세금 분석 →
+          </Link>
+        </div>
       </div>
     </main>
   )

@@ -13,15 +13,18 @@ const lruCache = new LRUCache<string, PricePoint[]>({
 })
 
 // ---------------------------------------------------------------------------
-// Rate limiting: 20 requests/minute per IP
+// Rate limiting: 20 requests/minute per IP (LRU to prevent memory leak)
 // ---------------------------------------------------------------------------
-const rateLimitMap = new Map<string, { count: number; resetAt: number }>()
+const rateLimitCache = new LRUCache<string, { count: number; resetAt: number }>({
+  max: 10_000,
+  ttl: 60_000,
+})
 
 function checkRateLimit(ip: string): boolean {
   const now = Date.now()
-  const entry = rateLimitMap.get(ip)
+  const entry = rateLimitCache.get(ip)
   if (!entry || entry.resetAt < now) {
-    rateLimitMap.set(ip, { count: 1, resetAt: now + 60_000 })
+    rateLimitCache.set(ip, { count: 1, resetAt: now + 60_000 })
     return true
   }
   if (entry.count >= 20) return false
@@ -164,7 +167,7 @@ export async function GET(request: NextRequest) {
     SUPPORTED_COINS.find((c) => c.id === coinSlug)
 
   if (!coin) {
-    return NextResponse.json({ error: `Unsupported coin: ${coinSlug}` }, { status: 400 })
+    return NextResponse.json({ error: 'Unsupported coin' }, { status: 400 })
   }
 
   const fromDate = new Date(fromParam + 'T00:00:00Z')
@@ -187,6 +190,15 @@ export async function GET(request: NextRequest) {
   if (toYear - fromYear > 10) {
     return NextResponse.json(
       { error: 'Maximum date range is 10 years' },
+      { status: 400 }
+    )
+  }
+
+  // Server-side listingDate validation — avoid wasting Binance calls
+  const listingMs = new Date(coin.listingDate + 'T00:00:00Z').getTime()
+  if (fromDate.getTime() < listingMs) {
+    return NextResponse.json(
+      { error: `Data available from ${coin.listingDate}` },
       { status: 400 }
     )
   }

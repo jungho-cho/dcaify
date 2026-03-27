@@ -10,7 +10,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts'
-import { CoinConfig, SUPPORTED_COINS } from '@/lib/coins'
+import { CoinConfig } from '@/lib/coins'
 import { PricesResponse } from '@/types/prices'
 import { calculateDca, calculateBreakEven, Frequency, DcaResult } from '@/lib/dca'
 import { Lang, getStrings } from '@/lib/strings'
@@ -18,6 +18,7 @@ import { Lang, getStrings } from '@/lib/strings'
 interface Props {
   defaultCoin: CoinConfig
   lang?: Lang
+  relatedCoins?: CoinConfig[]
 }
 
 type UiState = 'initial' | 'loading' | 'success' | 'error' | 'rate_limited'
@@ -35,10 +36,10 @@ function formatPct(n: number): string {
   return `${sign}${n.toFixed(2)}%`
 }
 
-export default function DcaCalculator({ defaultCoin, lang = 'en' }: Props) {
+export default function DcaCalculator({ defaultCoin, lang = 'en', relatedCoins }: Props) {
   const s = getStrings(lang)
+  const coin = defaultCoin
 
-  const [coin, setCoin] = useState<CoinConfig>(defaultCoin)
   const [amount, setAmount] = useState('100')
   const [frequency, setFrequency] = useState<Frequency>('monthly')
   const [startDate, setStartDate] = useState('2020-01-01')
@@ -137,27 +138,33 @@ export default function DcaCalculator({ defaultCoin, lang = 'en' }: Props) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [coin, amount, frequency, startDate, endDate, lang])
 
+  // Fixed: O(n) running sum instead of O(n²), uses currentPrice instead of last purchase price
   const chartData = result
-    ? result.purchases.reduce<{ date: string; value: number; invested: number }[]>(
-        (acc, p, i) => {
-          const prev = acc[i - 1]
-          const invested = (prev?.invested ?? 0) + p.amount
-          const totalCoins = result.purchases
-            .slice(0, i + 1)
-            .reduce((sum, x) => sum + x.coins, 0)
-          const value = totalCoins * (result.purchases[result.purchases.length - 1].price)
-          acc.push({ date: p.date, value: parseFloat(value.toFixed(2)), invested: parseFloat(invested.toFixed(2)) })
-          return acc
-        },
-        []
-      )
+    ? (() => {
+        const pricePerCoin = result.totalCoins > 0 ? result.currentValue / result.totalCoins : 0
+        let cumulativeCoins = 0
+        let cumulativeInvested = 0
+        return result.purchases.map((p) => {
+          cumulativeCoins += p.coins
+          cumulativeInvested += p.amount
+          return {
+            date: p.date,
+            value: parseFloat((cumulativeCoins * pricePerCoin).toFixed(2)),
+            invested: parseFloat(cumulativeInvested.toFixed(2)),
+          }
+        })
+      })()
     : []
 
+  // Only show tax break-even for Korean pages
   const breakEven = result && result.totalCoins > 0
-    ? calculateBreakEven(result.totalInvested, result.totalCoins, 0.22)
+    ? calculateBreakEven(result.totalInvested, result.totalCoins, lang === 'ko' ? 0.22 : 0)
     : null
 
   const isProfit = result && result.roi >= 0
+
+  const today = new Date().toISOString().slice(0, 10)
+  const isHistorical = endDate < today
 
   const shareText = result
     ? s.shareText(
@@ -169,6 +176,8 @@ export default function DcaCalculator({ defaultCoin, lang = 'en' }: Props) {
       )
     : ''
 
+  const langPrefix = lang === 'ko' ? '/ko' : ''
+
   return (
     <div className="space-y-6">
       <div>
@@ -177,23 +186,6 @@ export default function DcaCalculator({ defaultCoin, lang = 'en' }: Props) {
       </div>
       {/* Form */}
       <div className="bg-gray-900 rounded-2xl p-6 space-y-4">
-        {/* Coin tabs */}
-        <div className="flex gap-2 flex-wrap">
-          {SUPPORTED_COINS.map((c) => (
-            <button
-              key={c.id}
-              onClick={() => setCoin(c)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                coin.id === c.id
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
-              }`}
-            >
-              {c.symbol}
-            </button>
-          ))}
-        </div>
-
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {/* Amount */}
           <div>
@@ -265,6 +257,18 @@ export default function DcaCalculator({ defaultCoin, lang = 'en' }: Props) {
         </button>
       </div>
 
+      {/* Skeleton loading */}
+      {uiState === 'loading' && (
+        <div className="space-y-4 animate-pulse">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="bg-gray-900 rounded-xl p-4 h-20" />
+            ))}
+          </div>
+          <div className="bg-gray-900 rounded-2xl p-4 h-80" />
+        </div>
+      )}
+
       {/* Rate limited */}
       {uiState === 'rate_limited' && (
         <div className="bg-red-900/30 border border-red-700 rounded-2xl p-4 text-red-300">
@@ -303,7 +307,7 @@ export default function DcaCalculator({ defaultCoin, lang = 'en' }: Props) {
               <p className="text-lg font-bold">{formatUsd(result.totalInvested)}</p>
             </div>
             <div className="bg-gray-900 rounded-xl p-4">
-              <p className="text-xs text-gray-400 mb-1">{s.currentValue}</p>
+              <p className="text-xs text-gray-400 mb-1">{isHistorical ? (lang === 'ko' ? '종료일 가치' : 'Value at End Date') : s.currentValue}</p>
               <p className="text-lg font-bold">{formatUsd(result.currentValue)}</p>
             </div>
             <div className="bg-gray-900 rounded-xl p-4">
@@ -369,15 +373,17 @@ export default function DcaCalculator({ defaultCoin, lang = 'en' }: Props) {
           {breakEven && (
             <div className="bg-gray-900 rounded-2xl p-4">
               <h3 className="text-sm text-gray-400 mb-3">{s.breakEvenTitle}</h3>
-              <div className="grid grid-cols-2 gap-4">
+              <div className={`grid ${lang === 'ko' ? 'grid-cols-2' : 'grid-cols-1'} gap-4`}>
                 <div>
                   <p className="text-xs text-gray-500">{s.breakEvenPrice}</p>
                   <p className="text-base font-semibold">{formatUsd(breakEven.breakEvenPrice)}</p>
                 </div>
-                <div>
-                  <p className="text-xs text-gray-500">{s.breakEvenWithTax}</p>
-                  <p className="text-base font-semibold">{formatUsd(breakEven.breakEvenWithTax)}</p>
-                </div>
+                {lang === 'ko' && (
+                  <div>
+                    <p className="text-xs text-gray-500">{s.breakEvenWithTax}</p>
+                    <p className="text-base font-semibold">{formatUsd(breakEven.breakEvenWithTax)}</p>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -392,6 +398,24 @@ export default function DcaCalculator({ defaultCoin, lang = 'en' }: Props) {
             >
               {s.shareBtn}
             </a>
+          </div>
+        </div>
+      )}
+
+      {/* Related coins */}
+      {relatedCoins && relatedCoins.length > 0 && (
+        <div className="bg-gray-900 rounded-2xl p-4">
+          <h3 className="text-sm text-gray-400 mb-3">{lang === 'ko' ? '다른 코인 DCA 계산기' : 'Other DCA Calculators'}</h3>
+          <div className="flex gap-2 flex-wrap">
+            {relatedCoins.map((c) => (
+              <a
+                key={c.id}
+                href={`${langPrefix}/${c.slug}`}
+                className="px-4 py-2 rounded-lg text-sm font-medium bg-gray-800 text-gray-300 hover:bg-gray-700 transition-colors"
+              >
+                {c.symbol}
+              </a>
+            ))}
           </div>
         </div>
       )}
