@@ -1,6 +1,6 @@
 # DCAify — 내 할일 목록
 
-## 필수 (배포 전 반드시 완료)
+## 필수 (다음 라운드 우선순위)
 
 - [ ] **CoinGecko API 키 발급**
   - https://www.coingecko.com/en/api 에서 무료 Demo API 키 발급
@@ -23,10 +23,10 @@
   - https://search.google.com/search-console
   - 사이트 소유권 확인 후 sitemap.xml 제출: `https://dcaify.com/sitemap.xml`
 
-- [ ] **GA4 설치**
-  - Google Analytics 4 속성 생성
-  - 측정 ID (`G-XXXXXXXXXX`) 획득
-  - `src/app/layout.tsx`에 GA4 스크립트 추가 (또는 `next/script` 사용)
+- [ ] **GA4 이벤트 택소노미 점검**
+  - 현재 GA4는 설치되어 있음 (`G-6835L1T846`)
+  - `calculator_submit`, `calculator_success`, `comparison_submit`, `search_no_results` 이벤트가 실제로 들어오는지 확인
+  - privacy 문서와 실제 추적 이벤트 목록이 계속 일치하는지 점검
 
 ## 수익화 (트래픽 3개월 후)
 
@@ -43,3 +43,14 @@
 - [ ] 블로그 글 작성: "What is Dollar Cost Averaging? (DCA Explained)"
 - [ ] 블로그 글 작성: "Bitcoin DCA Results: $100/month for 5 Years"
 - [ ] 블로그 글 작성: "Ethereum DCA Calculator: Historical Returns"
+
+## 제품 신뢰 / 운영 TODO
+
+- [ ] **한국 가상자산 과세 상태 재검증**
+  - 공식 자료 기준으로 시행 시점, 세율, 기본공제, 기준일 재확인
+  - 코드의 tax status source-of-truth와 페이지 카피를 같이 업데이트
+  - 다음 재검토 날짜도 남기기
+
+- [ ] **핵심 코인 가이드 3~5개 심화**
+  - BTC, ETH, SOL 등 상위 진입 코인부터 템플릿형 설명을 더 깊은 intent content로 보강
+  - 얇은 SEO 페이지가 아니라 재방문 가능한 신뢰 페이지로 업그레이드

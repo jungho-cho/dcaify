@@ -1,13 +1,27 @@
-// Shared API contract — Route Handler and client both import from here
 export interface PricePoint {
-  timestamp: number // Unix ms
-  price: number     // USD
+  timestamp: number
+  price: number
 }
 
 export interface PricesResponse {
   coinId: string
-  prices: PricePoint[]       // daily [timestamp_ms, USD price]
+  prices: PricePoint[]
   dataSource: 'live' | 'cache' | 'stale'
   fromTimestamp: number
   toTimestamp: number
+}
+
+export type PriceApiErrorCode =
+  | 'missing_params'
+  | 'unsupported_coin'
+  | 'invalid_date'
+  | 'invalid_range'
+  | 'max_range'
+  | 'before_listing'
+  | 'rate_limited'
+  | 'upstream_unavailable'
+
+export interface PriceApiErrorResponse {
+  error: string
+  code: PriceApiErrorCode
 }

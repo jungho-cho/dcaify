@@ -20,7 +20,7 @@ export const metadata: Metadata = {
     template: "%s | DCAify",
   },
   description:
-    "Calculate your crypto dollar cost averaging returns. Bitcoin, Ethereum, Solana and 25+ coins. Break-even analysis with Korean tax support.",
+    "Calculate your crypto dollar cost averaging returns. Bitcoin, Ethereum, Solana, and 26 more coins, with clear assumptions, result explanations, and an estimated Korean tax scenario.",
   metadataBase: new URL("https://dcaify.com"),
   keywords: [
     "DCA calculator",
@@ -65,6 +65,8 @@ export default function RootLayout({
           rel="stylesheet"
         />
         <meta name="naver-site-verification" content="a0f8f58a53d5fc9aee6a53b4f4b242ae061fa4a0" />
+        {/* Using the raw GA snippet here to avoid adding another dependency just for analytics bootstrapping. */}
+        {/* eslint-disable-next-line @next/next/next-script-for-ga */}
         <script async src="https://www.googletagmanager.com/gtag/js?id=G-6835L1T846" />
         <script
           dangerouslySetInnerHTML={{

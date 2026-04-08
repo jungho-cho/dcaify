@@ -1,11 +1,12 @@
-import { notFound } from 'next/navigation'
-import { Metadata } from 'next'
+import { notFound, redirect } from 'next/navigation'
+import type { Metadata } from 'next'
 import Link from 'next/link'
-import { getCoinBySlug, SUPPORTED_COINS, getComparisonPairs } from '@/lib/coins'
+import ComparisonCalculator from '@/components/ComparisonCalculator'
 import DcaCalculator from '@/components/DcaCalculator'
 import Nav from '@/components/Nav'
+import { getCoinBySlug, getComparisonPairs, SUPPORTED_COINS } from '@/lib/coins'
 
-function JsonLd({ coin }: { coin: { name: string; symbol: string; slug: string } }) {
+function CoinJsonLd({ coin }: { coin: { name: string; symbol: string; slug: string } }) {
   const schema = {
     '@context': 'https://schema.org',
     '@type': 'WebApplication',
@@ -15,46 +16,62 @@ function JsonLd({ coin }: { coin: { name: string; symbol: string; slug: string }
     applicationCategory: 'FinanceApplication',
     offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
   }
-  return (
-    <script
-      type="application/ld+json"
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
-    />
-  )
+
+  return <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }} />
 }
 
-// This is a comparison page route: /btc-vs-eth
+function ComparisonJsonLd({
+  slug,
+  coin1,
+  coin2,
+}: {
+  slug: string
+  coin1: { name: string; symbol: string }
+  coin2: { name: string; symbol: string }
+}) {
+  const schema = {
+    '@context': 'https://schema.org',
+    '@type': 'WebPage',
+    name: `${coin1.name} vs ${coin2.name} DCA Comparison`,
+    description: `Compare ${coin1.name} and ${coin2.name} using the same DCA plan and shared time window.`,
+    url: `https://dcaify.com/${slug}`,
+  }
+
+  return <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }} />
+}
+
 function isComparisonSlug(slug: string): boolean {
   return slug.includes('-vs-')
 }
 
-// --- Comparison page helpers ---
 const comparisonPairs = getComparisonPairs()
 
 function getComparisonBySlug(slug: string) {
-  return comparisonPairs.find((p) => p.slug === slug)
+  return comparisonPairs.find((pair) => pair.slug === slug)
 }
 
 function getCanonicalComparisonSlug(slug: string): string | null {
   const parts = slug.split('-vs-')
   if (parts.length !== 2) return null
-  const [a, b] = parts
-  const coinA = getCoinBySlug(a)
-  const coinB = getCoinBySlug(b)
-  if (!coinA || !coinB) return null
-  const [first, second] = [coinA, coinB].sort((x, y) => x.symbol.localeCompare(y.symbol))
+
+  const [leftSlug, rightSlug] = parts
+  const leftCoin = getCoinBySlug(leftSlug)
+  const rightCoin = getCoinBySlug(rightSlug)
+  if (!leftCoin || !rightCoin) return null
+
+  const [first, second] = [leftCoin, rightCoin].sort((a, b) => a.symbol.localeCompare(b.symbol))
   return `${first.slug}-vs-${second.slug}`
 }
 
-// --- Static params: coin pages + comparison pages ---
 interface Props {
   params: Promise<{ slug: string }>
 }
 
 export function generateStaticParams() {
-  const coinParams = SUPPORTED_COINS.map((c) => ({ slug: c.slug }))
-  const compParams = comparisonPairs.map((p) => ({ slug: p.slug }))
-  return [...coinParams, ...compParams]
+  return [
+    ...SUPPORTED_COINS.map((coin) => ({ slug: coin.slug })),
+    ...comparisonPairs.map((pair) => ({ slug: pair.slug })),
+  ]
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -63,21 +80,24 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (isComparisonSlug(slug)) {
     const pair = getComparisonBySlug(slug)
     if (!pair) return {}
-    const title = `${pair.coin1.name} vs ${pair.coin2.name} DCA — Side-by-Side Comparison`
-    const description = `Compare ${pair.coin1.name} (${pair.coin1.symbol}) and ${pair.coin2.name} (${pair.coin2.symbol}) dollar cost averaging returns side by side.`
+
+    const title = `${pair.coin1.name} vs ${pair.coin2.name} DCA Comparison`
+    const description = `Run one shared DCA plan and see whether ${pair.coin1.name} or ${pair.coin2.name} held up better over the same window.`
+    const url = `https://dcaify.com/${slug}`
+
     return {
       title,
       description,
-      alternates: { canonical: `https://dcaify.com/${slug}` },
-      openGraph: { title, description, url: `https://dcaify.com/${slug}`, siteName: 'DCAify', type: 'website' },
+      alternates: { canonical: url },
+      openGraph: { title, description, url, siteName: 'DCAify', type: 'website' },
     }
   }
 
   const coin = getCoinBySlug(slug)
   if (!coin) return {}
 
-  const title = `${coin.name} DCA Calculator — See Your Returns`
-  const description = `Calculate your ${coin.name} (${coin.symbol}) dollar cost averaging returns. See exactly how much you'd have if you invested $100/month in ${coin.name} DCA strategy.`
+  const title = `${coin.name} DCA Calculator — See your recurring-buy result`
+  const description = `Calculate your ${coin.name} (${coin.symbol}) dollar cost averaging returns with real Binance daily closes, result explanations, and clear assumptions.`
   const url = `https://dcaify.com/${slug}`
 
   return {
@@ -92,85 +112,57 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 }
 
-// --- Comparison Page Component ---
-function ComparisonPage({ coin1, coin2, slug }: { coin1: typeof SUPPORTED_COINS[0]; coin2: typeof SUPPORTED_COINS[0]; slug: string }) {
+function ComparisonPage({ slug }: { slug: string }) {
+  const pair = getComparisonBySlug(slug)
+  if (!pair) notFound()
+
   return (
     <>
-    <Nav />
-    <main className="min-h-screen bg-gray-950 text-white">
-      <div className="max-w-5xl mx-auto px-4 py-8">
-        <h1 className="text-3xl font-bold mb-2">{coin1.name} vs {coin2.name} DCA Comparison</h1>
-        <p className="text-gray-400 mb-8">
-          Compare dollar cost averaging returns for {coin1.name} ({coin1.symbol}) and {coin2.name} ({coin2.symbol}) side by side.
-        </p>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div>
-            <DcaCalculator defaultCoin={coin1} />
-          </div>
-          <div>
-            <DcaCalculator defaultCoin={coin2} />
-          </div>
+      <ComparisonJsonLd slug={slug} coin1={pair.coin1} coin2={pair.coin2} />
+      <Nav />
+      <main className="min-h-screen">
+        <div className="max-w-5xl mx-auto px-4 py-8">
+          <ComparisonCalculator leftCoin={pair.coin1} rightCoin={pair.coin2} />
         </div>
-
-        <div className="mt-8 flex flex-wrap gap-3">
-          <Link href={`/${coin1.slug}`} className="text-blue-400 hover:underline text-sm">
-            {coin1.name} Calculator →
-          </Link>
-          <Link href={`/${coin2.slug}`} className="text-blue-400 hover:underline text-sm">
-            {coin2.name} Calculator →
-          </Link>
-          <Link href={`/${coin1.slug}/guide`} className="text-blue-400 hover:underline text-sm">
-            {coin1.name} Guide →
-          </Link>
-          <Link href={`/${coin2.slug}/guide`} className="text-blue-400 hover:underline text-sm">
-            {coin2.name} Guide →
-          </Link>
-        </div>
-      </div>
-    </main>
+      </main>
     </>
   )
 }
 
-// --- Main page handler ---
-export default async function SlugPage({ params }: Props) {
-  const { slug } = await params
-
-  // Comparison page
-  if (isComparisonSlug(slug)) {
-    const canonical = getCanonicalComparisonSlug(slug)
-    if (canonical && canonical !== slug) {
-      const { redirect } = await import('next/navigation')
-      redirect(`/${canonical}`)
-    }
-    const pair = getComparisonBySlug(slug)
-    if (!pair) notFound()
-    return <ComparisonPage coin1={pair.coin1} coin2={pair.coin2} slug={slug} />
-  }
-
-  // Coin calculator page
+function CoinCalculatorPage({ slug }: { slug: string }) {
   const coin = getCoinBySlug(slug)
   if (!coin) notFound()
 
-  const relatedCoins = SUPPORTED_COINS.filter(
-    (c) => c.category === coin.category && c.slug !== coin.slug,
-  ).slice(0, 5)
+  const relatedCoins = SUPPORTED_COINS.filter((candidate) => candidate.category === coin.category && candidate.slug !== coin.slug).slice(0, 5)
 
   return (
     <>
-      <JsonLd coin={coin} />
+      <CoinJsonLd coin={coin} />
       <Nav />
-      <main className="min-h-screen bg-gray-950 text-white">
+      <main className="min-h-screen">
         <div className="max-w-4xl mx-auto px-4 py-8">
           <DcaCalculator defaultCoin={coin} relatedCoins={relatedCoins} />
           <div className="mt-6 text-center space-x-4">
-            <Link href={`/${coin.slug}/guide`} className="text-blue-400 hover:underline text-sm">
-              Read the {coin.name} DCA Guide →
+            <Link href={`/${coin.slug}/guide`} className="text-sm hover:underline" style={{ color: 'var(--accent)' }}>
+              Read the {coin.name} guide →
             </Link>
           </div>
         </div>
       </main>
     </>
   )
+}
+
+export default async function SlugPage({ params }: Props) {
+  const { slug } = await params
+
+  if (isComparisonSlug(slug)) {
+    const canonicalSlug = getCanonicalComparisonSlug(slug)
+    if (canonicalSlug && canonicalSlug !== slug) {
+      redirect(`/${canonicalSlug}`)
+    }
+    return <ComparisonPage slug={slug} />
+  }
+
+  return <CoinCalculatorPage slug={slug} />
 }

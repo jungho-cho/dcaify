@@ -1,6 +1,7 @@
 import { Metadata } from 'next'
 import Link from 'next/link'
 import Nav from '@/components/Nav'
+import { getKoreanTaxStatus } from '@/lib/tax-status'
 
 export const metadata: Metadata = {
   title: 'DCAify 소개',
@@ -8,6 +9,8 @@ export const metadata: Metadata = {
 }
 
 export default function KoAboutPage() {
+  const taxStatus = getKoreanTaxStatus('ko')
+
   return (
     <>
       <Nav lang="ko" />
@@ -47,8 +50,8 @@ export default function KoAboutPage() {
 
             <h2 className="text-xl font-semibold" style={{ color: 'var(--text)' }}>세금 분석</h2>
             <p>
-              한국어 버전에서는 암호화폐 양도소득세(22%, 250만원 기본공제)를 고려한
-              세금 분석을 제공합니다. 세금을 포함한 손익분기점을 확인할 수 있습니다.
+              한국어 버전에서는 예정된 한국 가상자산 과세 시나리오를 반영한
+              손익분기점 참고값을 제공합니다. {taxStatus.summary}
             </p>
 
             <h2 className="text-xl font-semibold" style={{ color: 'var(--text)' }}>면책 조항</h2>

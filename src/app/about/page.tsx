@@ -1,6 +1,7 @@
 import { Metadata } from 'next'
 import Link from 'next/link'
 import Nav from '@/components/Nav'
+import { getKoreanTaxStatus } from '@/lib/tax-status'
 
 export const metadata: Metadata = {
   title: 'About DCAify',
@@ -8,6 +9,8 @@ export const metadata: Metadata = {
 }
 
 export default function AboutPage() {
+  const taxStatus = getKoreanTaxStatus('en')
+
   return (
     <>
       <Nav />
@@ -27,7 +30,7 @@ export default function AboutPage() {
               Enter your investment amount, frequency, and date range, and we show you
               the results: total invested, portfolio value, ROI percentage, and a visual
               chart of your portfolio growth over time. We also calculate break-even prices,
-              including Korean tax considerations.
+              including an estimated Korean tax-aware break-even scenario.
             </p>
 
             <h2 className="text-xl font-semibold" style={{ color: 'var(--text)' }}>Our Data</h2>
@@ -51,8 +54,8 @@ export default function AboutPage() {
             <h2 className="text-xl font-semibold" style={{ color: 'var(--text)' }}>Languages</h2>
             <p>
               DCAify is available in English and Korean (한국어). Our Korean version includes
-              tax analysis for the Korean cryptocurrency capital gains tax (22% rate with
-              2.5M KRW basic deduction).
+              a dedicated tax scenario page for the delayed Korean virtual-asset tax framework.
+              {` ${taxStatus.summary}`}
             </p>
 
             <h2 className="text-xl font-semibold" style={{ color: 'var(--text)' }}>Disclaimer</h2>

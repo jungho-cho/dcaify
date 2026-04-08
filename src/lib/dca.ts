@@ -1,21 +1,21 @@
-import { PricePoint } from '@/types/prices'
+import type { PricePoint } from '@/types/prices'
 
 export type Frequency = 'daily' | 'weekly' | 'monthly'
 
 export interface DcaInput {
-  prices: PricePoint[]       // sorted ascending by timestamp
-  amountPerPeriod: number    // USD
+  prices: PricePoint[]
+  amountPerPeriod: number
   frequency: Frequency
-  startDate: string          // YYYY-MM-DD
-  endDate: string            // YYYY-MM-DD
-  currentPrice: number       // latest USD price for current value calculation
+  startDate: string
+  endDate: string
+  currentPrice: number
 }
 
 export interface DcaResult {
   totalInvested: number
   totalCoins: number
   currentValue: number
-  roi: number           // percentage e.g. 312.5
+  roi: number
   purchases: Purchase[]
   startDate: string
   endDate: string
@@ -24,7 +24,7 @@ export interface DcaResult {
 export interface Purchase {
   date: string
   price: number
-  amount: number  // USD invested
+  amount: number
   coins: number
 }
 
@@ -33,78 +33,61 @@ export interface BreakEvenResult {
   breakEvenWithTax: number
 }
 
-// Build a date → price lookup map from sorted PricePoint array
 function buildPriceMap(prices: PricePoint[]): Map<string, number> {
   const map = new Map<string, number>()
-  for (const p of prices) {
-    const date = new Date(p.timestamp).toISOString().slice(0, 10)
-    map.set(date, p.price)
+  for (const point of prices) {
+    const date = new Date(point.timestamp).toISOString().slice(0, 10)
+    map.set(date, point.price)
   }
   return map
 }
 
-// Find nearest available price on or after the target date
-function findNearestPrice(
-  map: Map<string, number>,
-  targetDate: Date,
-  prices: PricePoint[]
-): number | null {
-  // Try exact date first
+function findNearestPrice(map: Map<string, number>, targetDate: Date): number | null {
   const dateStr = targetDate.toISOString().slice(0, 10)
   if (map.has(dateStr)) return map.get(dateStr)!
 
-  // Search forward up to 7 days (weekend / missing data gap)
-  for (let i = 1; i <= 7; i++) {
-    const d = new Date(targetDate)
-    d.setUTCDate(d.getUTCDate() + i)
-    const s = d.toISOString().slice(0, 10)
-    if (map.has(s)) return map.get(s)!
+  for (let offset = 1; offset <= 7; offset += 1) {
+    const nextDate = new Date(targetDate)
+    nextDate.setUTCDate(nextDate.getUTCDate() + offset)
+    const nextStr = nextDate.toISOString().slice(0, 10)
+    if (map.has(nextStr)) return map.get(nextStr)!
   }
 
-  // Search backward up to 7 days
-  for (let i = 1; i <= 7; i++) {
-    const d = new Date(targetDate)
-    d.setUTCDate(d.getUTCDate() - i)
-    const s = d.toISOString().slice(0, 10)
-    if (map.has(s)) return map.get(s)!
+  for (let offset = 1; offset <= 7; offset += 1) {
+    const previousDate = new Date(targetDate)
+    previousDate.setUTCDate(previousDate.getUTCDate() - offset)
+    const previousStr = previousDate.toISOString().slice(0, 10)
+    if (map.has(previousStr)) return map.get(previousStr)!
   }
 
   return null
 }
 
-// Generate purchase dates based on frequency
-function generatePurchaseDates(
-  startDate: string,
-  endDate: string,
-  frequency: Frequency
-): Date[] {
+function generatePurchaseDates(startDate: string, endDate: string, frequency: Frequency): Date[] {
   const dates: Date[] = []
-  const start = new Date(startDate + 'T00:00:00Z')
-  const end = new Date(endDate + 'T00:00:00Z')
-
+  const start = new Date(`${startDate}T00:00:00Z`)
+  const end = new Date(`${endDate}T00:00:00Z`)
   if (start > end) return dates
 
   const current = new Date(start)
-
   while (current <= end) {
     dates.push(new Date(current))
 
     if (frequency === 'daily') {
       current.setUTCDate(current.getUTCDate() + 1)
-    } else if (frequency === 'weekly') {
-      current.setUTCDate(current.getUTCDate() + 7)
-    } else {
-      // monthly — same day next month, clamped to month end
-      const day = start.getUTCDate()
-      // Set to 1st first to prevent overflow (e.g. Jan 31 + 1 month = Mar 3)
-      current.setUTCDate(1)
-      current.setUTCMonth(current.getUTCMonth() + 1)
-      // Clamp to month end (handles Jan 31 → Feb 28/29 correctly)
-      const lastDay = new Date(
-        Date.UTC(current.getUTCFullYear(), current.getUTCMonth() + 1, 0)
-      ).getUTCDate()
-      current.setUTCDate(Math.min(day, lastDay))
+      continue
     }
+
+    if (frequency === 'weekly') {
+      current.setUTCDate(current.getUTCDate() + 7)
+      continue
+    }
+
+    const day = start.getUTCDate()
+    current.setUTCDate(1)
+    current.setUTCMonth(current.getUTCMonth() + 1)
+    const lastDay = new Date(Date.UTC(current.getUTCFullYear(), current.getUTCMonth() + 1, 0)).getUTCDate()
+    current.setUTCDate(Math.min(day, lastDay))
   }
 
   return dates
@@ -113,31 +96,25 @@ function generatePurchaseDates(
 export function calculateDca(input: DcaInput): DcaResult {
   const { prices, amountPerPeriod, frequency, startDate, endDate, currentPrice } = input
 
-  if (amountPerPeriod <= 0) {
-    throw new Error('Investment amount must be greater than 0')
-  }
-
-  if (!prices || prices.length === 0) {
-    throw new Error('No price data available')
-  }
+  if (amountPerPeriod <= 0) throw new Error('Investment amount must be greater than 0')
+  if (!prices.length) throw new Error('No price data available')
 
   const priceMap = buildPriceMap(prices)
   const purchaseDates = generatePurchaseDates(startDate, endDate, frequency)
-
   const purchases: Purchase[] = []
   let totalInvested = 0
   let totalCoins = 0
 
-  for (const date of purchaseDates) {
-    const price = findNearestPrice(priceMap, date, prices)
-    if (price === null || price === 0) continue // skip days with no data
+  for (const purchaseDate of purchaseDates) {
+    const price = findNearestPrice(priceMap, purchaseDate)
+    if (price === null || price === 0) continue
 
     const coins = amountPerPeriod / price
     totalInvested += amountPerPeriod
     totalCoins += coins
 
     purchases.push({
-      date: date.toISOString().slice(0, 10),
+      date: purchaseDate.toISOString().slice(0, 10),
       price,
       amount: amountPerPeriod,
       coins,
@@ -158,21 +135,10 @@ export function calculateDca(input: DcaInput): DcaResult {
   }
 }
 
-// Break-even price calculation
-// taxRate: 0 for no tax, 0.22 for Korean 22%
-export function calculateBreakEven(
-  totalInvested: number,
-  totalCoins: number,
-  taxRate = 0
-): BreakEvenResult {
-  if (totalCoins === 0) {
-    throw new Error('Cannot calculate break-even: no coins accumulated')
-  }
+export function calculateBreakEven(totalInvested: number, totalCoins: number, taxRate = 0): BreakEvenResult {
+  if (totalCoins === 0) throw new Error('Cannot calculate break-even: no coins accumulated')
 
   const breakEvenPrice = totalInvested / totalCoins
-
-  // With tax: need to net enough to cover invested amount after tax
-  // net_needed = totalInvested / (1 - taxRate)
   const netNeeded = taxRate >= 1 ? Infinity : totalInvested / (1 - taxRate)
   const breakEvenWithTax = netNeeded / totalCoins
 

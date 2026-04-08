@@ -20,14 +20,14 @@ export default function PrivacyPage() {
               <h2 className="text-lg font-semibold mb-2" style={{ color: 'var(--text)' }}>Information We Collect</h2>
               <p>DCAify collects minimal data to operate the service:</p>
               <ul className="list-disc list-inside mt-2 space-y-1">
-                <li><strong>Page views:</strong> We record which pages are visited, the referring URL, and the timestamp. This data is anonymous.</li>
+                <li><strong>Site usage analytics:</strong> We use Google Analytics 4 to measure page views, page referrers, and a small set of product events such as calculator submits, comparison runs, and recovery clicks from empty search states.</li>
                 <li><strong>Calculator inputs:</strong> Your investment amount, frequency, and date range are processed entirely in your browser. This data is never sent to our servers or stored.</li>
               </ul>
             </section>
 
             <section>
               <h2 className="text-lg font-semibold mb-2" style={{ color: 'var(--text)' }}>How We Use Your Data</h2>
-              <p>Anonymous page view data helps us understand which coins and features are most useful, so we can improve the service.</p>
+              <p>Aggregated analytics help us understand which entry pages, calculators, and comparison flows are actually useful, so we can improve the product without storing your calculator inputs.</p>
             </section>
 
             <section>
@@ -35,13 +35,14 @@ export default function PrivacyPage() {
               <ul className="list-disc list-inside space-y-1">
                 <li><strong>Binance API:</strong> We fetch cryptocurrency price data from Binance. Your browser does not directly communicate with Binance.</li>
                 <li><strong>Vercel:</strong> Our site is hosted on Vercel. See <a href="https://vercel.com/legal/privacy-policy" target="_blank" rel="noopener noreferrer" className="hover:underline" style={{ color: 'var(--accent)' }}>Vercel&apos;s Privacy Policy</a>.</li>
-                <li><strong>Supabase:</strong> Anonymous analytics data is stored in Supabase. See <a href="https://supabase.com/privacy" target="_blank" rel="noopener noreferrer" className="hover:underline" style={{ color: 'var(--accent)' }}>Supabase Privacy Policy</a>.</li>
+                <li><strong>Google Analytics:</strong> We use GA4 for aggregated usage analytics. See <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer" className="hover:underline" style={{ color: 'var(--accent)' }}>Google&apos;s Privacy Policy</a>.</li>
+                <li><strong>Supabase:</strong> Supabase stores blog content. It is not our analytics source of truth.</li>
               </ul>
             </section>
 
             <section>
               <h2 className="text-lg font-semibold mb-2" style={{ color: 'var(--text)' }}>Cookies</h2>
-              <p>DCAify does not use cookies for tracking. If we add advertising in the future, those services may set their own cookies. We will update this policy accordingly.</p>
+              <p>DCAify itself does not persist your calculator inputs. Google Analytics may set its own measurement cookies or similar browser storage. If we add advertising later, those providers may add their own cookies and this policy will be updated.</p>
             </section>
 
             <section>

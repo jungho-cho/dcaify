@@ -8,7 +8,7 @@ function getClient(): SupabaseClient {
   if (!supabaseUrl || !supabaseAnonKey) {
     // Return a proxy that makes all queries return empty data
     return new Proxy({} as SupabaseClient, {
-      get: () => (..._args: unknown[]) => ({
+      get: () => () => ({
         select: () => ({ eq: () => ({ eq: () => ({ order: () => ({ data: [], error: null }), single: () => ({ data: null, error: null }) }), order: () => ({ data: [], error: null }), single: () => ({ data: null, error: null }) }), order: () => ({ data: [], error: null }) }),
         data: [],
         error: null,
