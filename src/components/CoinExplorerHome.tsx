@@ -45,7 +45,7 @@ const COPY = {
     featuredLinks: [
       { href: '/ko/btc', label: '비트코인부터 시작' },
       { href: '/ko/eth', label: '이더리움 계산' },
-      { href: '/btc-vs-eth', label: 'BTC vs ETH 비교' },
+      { href: '/btc-vs-eth', label: 'BTC vs ETH 비교 (영문)' },
     ],
     sectionTitle: '원하는 코인을 골라 바로 계산하세요',
     sectionDescription:
@@ -55,7 +55,7 @@ const COPY = {
       '대부분의 계산기는 숫자만 보여줍니다. DCAify는 그 숫자가 왜 나왔는지, 어떤 전제를 썼는지, 한국 사용자에게 어떤 의미인지까지 같이 보여주려고 합니다.',
     featuredTitle: '한국어 사용자에게 특히 유용한 시작점',
     featuredDescription:
-      '비트코인 계산부터 시작하거나, 한글 가이드와 예상 세금 시나리오 페이지로 바로 들어가세요.',
+      '비트코인 계산부터 시작하거나, 한글 가이드와 예상 세금 시나리오 페이지로 바로 들어가세요. 비교 페이지는 현재 영문으로 제공됩니다.',
     recoverySuggestions: [
       { href: '/ko/btc', label: '비트코인 계산기' },
       { href: '/ko/eth', label: '이더리움 계산기' },
