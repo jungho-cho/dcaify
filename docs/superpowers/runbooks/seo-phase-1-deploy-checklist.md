@@ -2,6 +2,13 @@
 
 Follow this after merging the Phase 1 branch and deploying to production.
 
+## 0. Prerequisite: Cloudflare DNS / proxy
+
+Before the rest of this checklist, confirm that `www.dcaify.com` actually reaches the Pages deployment. The 301 middleware only fires for requests that are routed to the Worker.
+
+- [ ] In the Cloudflare dashboard → DNS, confirm `www.dcaify.com` is a CNAME (or ALIAS) pointing to the Pages project and is proxied (orange cloud). If the record is absent or DNS-only (grey cloud), the middleware will never see `www` traffic and the 301 smoke check below will either fail with connection refused or return an unexpected status.
+- [ ] Both `dcaify.com` and `www.dcaify.com` should be listed as custom domains on the Pages project (Cloudflare Pages → project → Custom domains).
+
 ## 1. Post-deploy smoke checks (within 1 hour)
 
 - [ ] `curl -sI https://www.dcaify.com/btc` → status `301`, `location: https://dcaify.com/btc`

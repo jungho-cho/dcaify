@@ -37,6 +37,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title: post.title,
     description: post.description,
+    // Phase 1: noindex individual blog posts until content quality is established (see docs/superpowers/specs/2026-04-16-seo-indexation-recovery-design.md).
+    robots: { index: false, follow: true },
     openGraph: {
       title: post.title,
       description: post.description,
