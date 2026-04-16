@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation'
 import { Metadata } from 'next'
 import Link from 'next/link'
 import { getCoinBySlug, SUPPORTED_COINS } from '@/lib/coins'
+import { shouldIndex } from '@/lib/seo'
 import DcaCalculator from '@/components/DcaCalculator'
 import Nav from '@/components/Nav'
 
@@ -44,6 +45,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       title,
       description,
     },
+    robots: shouldIndex('coin', slug),
   }
 }
 

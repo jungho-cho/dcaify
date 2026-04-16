@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation'
 import { Metadata } from 'next'
 import Link from 'next/link'
 import AnalyticsViewTracker from '@/components/AnalyticsViewTracker'
+import { shouldIndex } from '@/lib/seo'
 import { getCoinBySlug, SUPPORTED_COINS } from '@/lib/coins'
 import DcaCalculator from '@/components/DcaCalculator'
 import Nav from '@/components/Nav'
@@ -30,6 +31,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     alternates: { canonical: url },
     openGraph: { title, description, url, siteName: 'DCAify', type: 'website' },
     twitter: { card: 'summary_large_image', title, description },
+    robots: shouldIndex('tax', slug),
   }
 }
 
