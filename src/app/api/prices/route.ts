@@ -32,10 +32,6 @@ function currentYear(): number {
   return new Date().getFullYear()
 }
 
-function kvTtl(year: number): number {
-  return year < currentYear() ? 60 * 60 * 24 * 30 : 60 * 60 * 2
-}
-
 function cacheKey(binanceSymbol: string, year: number): string {
   return `bn:${binanceSymbol}:${year}`
 }
@@ -86,40 +82,14 @@ async function fetchYearFromBinance(binanceSymbol: string, year: number): Promis
   }))
 }
 
-async function kvGet(key: string): Promise<PricePoint[] | null> {
-  try {
-    const { kv } = await import('@vercel/kv')
-    const data = await kv.get<PricePoint[]>(key)
-    return data ?? null
-  } catch {
-    return null
-  }
-}
-
-async function kvSet(key: string, value: PricePoint[], ttl: number): Promise<void> {
-  try {
-    const { kv } = await import('@vercel/kv')
-    await kv.set(key, value, { ex: ttl })
-  } catch {
-    // optional cache layer, ignore when unavailable
-  }
-}
-
 async function getPricesForYear(binanceSymbol: string, year: number): Promise<{ prices: PricePoint[]; source: 'live' | 'cache' | 'stale' }> {
   const key = cacheKey(binanceSymbol, year)
 
   const lruHit = lruCache.get(key)
   if (lruHit) return { prices: lruHit, source: 'cache' }
 
-  const kvHit = await kvGet(key)
-  if (kvHit) {
-    lruCache.set(key, kvHit)
-    return { prices: kvHit, source: 'cache' }
-  }
-
   const prices = await fetchYearFromBinance(binanceSymbol, year)
   lruCache.set(key, prices)
-  await kvSet(key, prices, kvTtl(year))
   return { prices, source: 'live' }
 }
 

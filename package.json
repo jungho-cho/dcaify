@@ -5,14 +5,17 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "build:cf": "opennextjs-cloudflare build",
+    "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
+    "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@opennextjs/cloudflare": "^1.19.1",
     "@supabase/supabase-js": "^2.100.1",
-    "@vercel/kv": "^3.0.0",
     "lru-cache": "^11.2.7",
     "next": "16.2.1",
     "react": "19.2.4",
@@ -26,10 +29,12 @@
     "@types/react-dom": "^19",
     "@vitest/coverage-v8": "^4.1.1",
     "babel-plugin-react-compiler": "1.0.0",
+    "esbuild": "^0.27.7",
     "eslint": "^9",
     "eslint-config-next": "16.2.1",
     "tailwindcss": "^4",
     "typescript": "^5",
-    "vitest": "^4.1.1"
+    "vitest": "^4.1.1",
+    "wrangler": "^4.83.0"
   }
 }
