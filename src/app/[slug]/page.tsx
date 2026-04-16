@@ -5,6 +5,7 @@ import ComparisonCalculator from '@/components/ComparisonCalculator'
 import DcaCalculator from '@/components/DcaCalculator'
 import Nav from '@/components/Nav'
 import { getCoinBySlug, getComparisonPairs, SUPPORTED_COINS } from '@/lib/coins'
+import { shouldIndex } from '@/lib/seo'
 
 function CoinJsonLd({ coin }: { coin: { name: string; symbol: string; slug: string } }) {
   const schema = {
@@ -90,6 +91,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       description,
       alternates: { canonical: url },
       openGraph: { title, description, url, siteName: 'DCAify', type: 'website' },
+      robots: shouldIndex('comparison', slug),
     }
   }
 
@@ -109,6 +111,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     },
     openGraph: { title, description, url, siteName: 'DCAify', type: 'website' },
     twitter: { card: 'summary_large_image', title, description },
+    robots: shouldIndex('coin', slug),
   }
 }
 
