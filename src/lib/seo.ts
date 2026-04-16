@@ -7,6 +7,8 @@
  * docs/superpowers/specs/2026-04-16-seo-indexation-recovery-design.md.
  */
 
+import type { Metadata } from 'next'
+
 export const TOP_COIN_SLUGS = [
   'btc',
   'eth',
@@ -41,12 +43,7 @@ export function isTopComparison(slug: string): boolean {
 
 export type PageType = 'coin' | 'guide' | 'comparison' | 'tax'
 
-export interface RobotsDirective {
-  index: boolean
-  follow: boolean
-}
-
-export function shouldIndex(type: PageType, slug: string): RobotsDirective {
+export function shouldIndex(type: PageType, slug: string): Metadata['robots'] {
   if (type === 'tax') return { index: false, follow: true }
   if (type === 'comparison') {
     return { index: isTopComparison(slug), follow: true }
