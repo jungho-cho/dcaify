@@ -31,4 +31,10 @@ describe('middleware', () => {
     expect(res.headers.get('location')).toBeNull()
     expect(res.status).not.toBe(301)
   })
+
+  it('does not redirect www-prefixed subdomains other than production', () => {
+    const res = middleware(makeRequest('https://www.staging.dcaify.com/btc'))
+    expect(res.headers.get('location')).toBeNull()
+    expect(res.status).not.toBe(301)
+  })
 })

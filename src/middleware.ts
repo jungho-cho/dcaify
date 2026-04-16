@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-export function middleware(request: NextRequest) {
-  const host = request.headers.get('host') ?? request.nextUrl.host
+const WWW_HOST = 'www.dcaify.com'
+const APEX_HOST = 'dcaify.com'
 
-  if (host.toLowerCase().startsWith('www.')) {
+export function middleware(request: NextRequest) {
+  const host = (request.headers.get('host') ?? request.nextUrl.host).toLowerCase()
+
+  if (host === WWW_HOST) {
     const apexUrl = new URL(request.nextUrl.toString())
-    apexUrl.host = host.slice(4)
+    apexUrl.host = APEX_HOST
     apexUrl.protocol = 'https:'
     return NextResponse.redirect(apexUrl, 301)
   }
