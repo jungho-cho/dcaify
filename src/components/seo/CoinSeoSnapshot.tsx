@@ -13,6 +13,14 @@ function formatMonthlyAmount(value: number): string {
   return formatUsd(value).replace('.00', '')
 }
 
+function formatScenarioWindow(label: SeoScenario['label'], lang: SuccessfulCoinSeoSnapshot['lang']): string {
+  if (lang === 'ko') {
+    return label.replace('y', '년')
+  }
+
+  return label
+}
+
 function coinTitle(snapshot: SuccessfulCoinSeoSnapshot): string {
   if (snapshot.lang === 'ko' && snapshot.coin.slug === 'btc') {
     return '비트코인 적립식 투자 계산기'
@@ -76,10 +84,10 @@ function ResultCard({ label, value }: { label: string; value: string }) {
   )
 }
 
-function ScenarioRow({ scenario }: { scenario: SeoScenario }) {
+function ScenarioRow({ scenario, lang }: { scenario: SeoScenario; lang: SuccessfulCoinSeoSnapshot['lang'] }) {
   return (
     <tr>
-      <td className="py-2 pr-4">{scenario.label}</td>
+      <td className="py-2 pr-4">{formatScenarioWindow(scenario.label, lang)}</td>
       <td className="py-2 pr-4 tabular-nums">{formatUsd(scenario.amount)}</td>
       <td className="py-2 pr-4 tabular-nums">{formatUsd(scenario.result.totalInvested)}</td>
       <td className="py-2 pr-4 tabular-nums">{formatUsd(scenario.result.currentValue)}</td>
@@ -110,6 +118,37 @@ export default function CoinSeoSnapshotView({ snapshot }: CoinSeoSnapshotViewPro
   const title = coinTitle(snapshot)
   const scenario = snapshot.defaultScenario
   const faqs = faqItems(snapshot)
+  const copy = snapshot.lang === 'ko'
+    ? {
+        scenarioTable: '시나리오 표',
+        window: '기간',
+        monthly: '월 투자금',
+        invested: '투자금',
+        value: '평가액',
+        roi: '수익률',
+        dcaVsLumpSum: 'DCA와 일시 투자 비교',
+        dcaValue: 'DCA 가치',
+        lumpSumValue: '일시 투자 가치',
+        difference: '차이',
+        averageBuyPrice: '평균 매수가',
+        currentPrice: '현재 가격',
+        assetMaxDrawdown: '자산 최대 낙폭',
+      }
+    : {
+        scenarioTable: 'Scenario table',
+        window: 'Window',
+        monthly: 'Monthly',
+        invested: 'Invested',
+        value: 'Value',
+        roi: 'ROI',
+        dcaVsLumpSum: 'DCA vs lump sum',
+        dcaValue: 'DCA value',
+        lumpSumValue: 'Lump-sum value',
+        difference: 'Difference',
+        averageBuyPrice: 'Average buy price',
+        currentPrice: 'Current price',
+        assetMaxDrawdown: 'Asset max drawdown',
+      }
   const faqJsonLd = {
     '@context': 'https://schema.org',
     '@type': 'FAQPage',
@@ -149,20 +188,20 @@ export default function CoinSeoSnapshotView({ snapshot }: CoinSeoSnapshotViewPro
         className="overflow-x-auto p-5"
         style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)' }}
       >
-        <h2 className="text-xl font-semibold mb-3">Scenario table</h2>
+        <h2 className="text-xl font-semibold mb-3">{copy.scenarioTable}</h2>
         <table className="w-full text-sm">
           <thead style={{ color: 'var(--text-muted)' }}>
             <tr>
-              <th className="text-left py-2 pr-4">Window</th>
-              <th className="text-left py-2 pr-4">Monthly</th>
-              <th className="text-left py-2 pr-4">Invested</th>
-              <th className="text-left py-2 pr-4">Value</th>
-              <th className="text-left py-2">ROI</th>
+              <th className="text-left py-2 pr-4">{copy.window}</th>
+              <th className="text-left py-2 pr-4">{copy.monthly}</th>
+              <th className="text-left py-2 pr-4">{copy.invested}</th>
+              <th className="text-left py-2 pr-4">{copy.value}</th>
+              <th className="text-left py-2">{copy.roi}</th>
             </tr>
           </thead>
           <tbody>
             {snapshot.scenarioMatrix.map((item) => (
-              <ScenarioRow key={`${item.label}-${item.amount}`} scenario={item} />
+              <ScenarioRow key={`${item.label}-${item.amount}`} scenario={item} lang={snapshot.lang} />
             ))}
           </tbody>
         </table>
@@ -170,15 +209,15 @@ export default function CoinSeoSnapshotView({ snapshot }: CoinSeoSnapshotViewPro
 
       <div className="grid gap-4 lg:grid-cols-2">
         <div className="p-5" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)' }}>
-          <h2 className="text-xl font-semibold mb-2">DCA vs lump sum</h2>
+          <h2 className="text-xl font-semibold mb-2">{copy.dcaVsLumpSum}</h2>
           <p className="text-sm leading-relaxed" style={{ color: 'var(--text-muted)' }}>
-            DCA value: {formatUsd(snapshot.dcaVsLumpSum.dcaValue)}. Lump-sum value: {formatUsd(snapshot.dcaVsLumpSum.lumpSumValue)}. Difference: {formatUsd(snapshot.dcaVsLumpSum.difference)}.
+            {copy.dcaValue}: {formatUsd(snapshot.dcaVsLumpSum.dcaValue)}. {copy.lumpSumValue}: {formatUsd(snapshot.dcaVsLumpSum.lumpSumValue)}. {copy.difference}: {formatUsd(snapshot.dcaVsLumpSum.difference)}.
           </p>
         </div>
         <div className="p-5" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)' }}>
           <h2 className="text-xl font-semibold mb-2">{snapshot.lang === 'ko' ? '리스크 지표' : 'Risk metrics'}</h2>
           <p className="text-sm leading-relaxed" style={{ color: 'var(--text-muted)' }}>
-            Average buy price: {formatUsd(snapshot.risk.averageBuyPrice)}. Current price: {formatUsd(snapshot.risk.currentPrice)}. Asset max drawdown: {formatPct(snapshot.risk.maxDrawdownPct)}.
+            {copy.averageBuyPrice}: {formatUsd(snapshot.risk.averageBuyPrice)}. {copy.currentPrice}: {formatUsd(snapshot.risk.currentPrice)}. {copy.assetMaxDrawdown}: {formatPct(snapshot.risk.maxDrawdownPct)}.
           </p>
         </div>
       </div>

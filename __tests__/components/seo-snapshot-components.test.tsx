@@ -60,6 +60,12 @@ describe('CoinSeoSnapshotView', () => {
     expect(html).toContain('비트코인 적립식 투자 계산기')
     expect(html).toContain('달러 기준')
     expect(html).toContain('/ko/btc/tax')
+    expect(html).toContain('시나리오 표')
+    expect(html).toContain('기간')
+    expect(html).toContain('월 투자금')
+    expect(html).toContain('DCA와 일시 투자 비교')
+    expect(html).toContain('평균 매수가')
+    expect(html).not.toContain('DCA vs lump sum')
   })
 })
 
