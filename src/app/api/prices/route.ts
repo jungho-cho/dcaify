@@ -1,13 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { LRUCache } from 'lru-cache'
+import { getHistoricalPrices } from '@/lib/binance-prices'
 import { SUPPORTED_COINS } from '@/lib/coins'
-import type { PriceApiErrorCode, PriceApiErrorResponse, PricePoint, PricesResponse } from '@/types/prices'
-
-const lruCache = new LRUCache<string, PricePoint[]>({
-  maxSize: 50 * 1024 * 1024,
-  sizeCalculation: (value) => JSON.stringify(value).length,
-  ttl: 1000 * 60 * 60,
-})
+import type { PriceApiErrorCode, PriceApiErrorResponse, PricesResponse } from '@/types/prices'
 
 const rateLimitCache = new LRUCache<string, { count: number; resetAt: number }>({
   max: 10_000,
@@ -32,65 +27,8 @@ function currentYear(): number {
   return new Date().getFullYear()
 }
 
-function cacheKey(binanceSymbol: string, year: number): string {
-  return `bn:${binanceSymbol}:${year}`
-}
-
-function createUpstreamError(message: string, status = 0): Error & { status: number } {
-  const error = new Error(message) as Error & { status: number }
-  error.status = status
-  return error
-}
-
 function logApiEvent(event: string, detail: Record<string, unknown>): void {
   console.error(JSON.stringify({ scope: 'prices_api', event, ...detail }))
-}
-
-async function fetchYearFromBinance(binanceSymbol: string, year: number): Promise<PricePoint[]> {
-  const startTime = new Date(`${year}-01-01T00:00:00Z`).getTime()
-  const endTime = year === currentYear() ? Date.now() : new Date(`${year}-12-31T23:59:59Z`).getTime()
-
-  const baseUrls = [
-    'https://data-api.binance.vision',
-    'https://api.binance.com',
-    'https://api1.binance.com',
-    'https://api2.binance.com',
-    'https://api3.binance.com',
-  ]
-
-  const path = `/api/v3/klines?symbol=${binanceSymbol}&interval=1d&startTime=${startTime}&endTime=${endTime}&limit=1000`
-
-  let response: Response | null = null
-  for (const baseUrl of baseUrls) {
-    try {
-      response = await fetch(baseUrl + path, { next: { revalidate: 0 } })
-      if (response.ok) break
-    } catch (error) {
-      logApiEvent('upstream_fetch_failed', { baseUrl, binanceSymbol, year, error: error instanceof Error ? error.message : 'unknown_error' })
-      continue
-    }
-  }
-
-  if (!response || !response.ok) {
-    throw createUpstreamError(`Binance upstream unavailable for ${binanceSymbol}/${year}`, response?.status ?? 0)
-  }
-
-  const data = (await response.json()) as [number, string, string, string, string, ...unknown[]][]
-  return data.map(([openTime, , , , close]) => ({
-    timestamp: openTime,
-    price: parseFloat(close),
-  }))
-}
-
-async function getPricesForYear(binanceSymbol: string, year: number): Promise<{ prices: PricePoint[]; source: 'live' | 'cache' | 'stale' }> {
-  const key = cacheKey(binanceSymbol, year)
-
-  const lruHit = lruCache.get(key)
-  if (lruHit) return { prices: lruHit, source: 'cache' }
-
-  const prices = await fetchYearFromBinance(binanceSymbol, year)
-  lruCache.set(key, prices)
-  return { prices, source: 'live' }
 }
 
 function errorResponse(status: number, code: PriceApiErrorCode, error: string) {
@@ -140,29 +78,9 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const allPrices: PricePoint[] = []
-    let overallSource: 'live' | 'cache' | 'stale' = 'cache'
+    const response = await getHistoricalPrices({ binanceSymbol: coin.binanceSymbol, from: fromParam, to: toParam })
 
-    for (let year = fromYear; year <= toYear; year += 1) {
-      const { prices, source } = await getPricesForYear(coin.binanceSymbol, year)
-      allPrices.push(...prices)
-      if (source === 'live') overallSource = 'live'
-      if (source === 'stale') overallSource = 'stale'
-    }
-
-    const fromTimestamp = fromDate.getTime()
-    const toTimestamp = toDate.getTime()
-    const filtered = allPrices.filter((point) => point.timestamp >= fromTimestamp && point.timestamp <= toTimestamp)
-
-    const response: PricesResponse = {
-      coinId: coin.id,
-      prices: filtered,
-      dataSource: overallSource,
-      fromTimestamp,
-      toTimestamp,
-    }
-
-    return NextResponse.json(response)
+    return NextResponse.json<PricesResponse>({ ...response, coinId: coin.id })
   } catch (error) {
     logApiEvent('upstream_unavailable', {
       coin: coin.slug,
