@@ -38,6 +38,7 @@ yarn-error.log*
 
 # opennext
 .open-next
+.worktrees/
 
 # typescript
 *.tsbuildinfo
