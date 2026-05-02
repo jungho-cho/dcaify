@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { isTopCoin, isTopComparison, shouldIndex } from '@/lib/seo'
+import {
+  isFocusedTrafficCoin,
+  isFocusedTrafficComparison,
+  isFocusedTrafficKoreanCoin,
+  isTopCoin,
+  isTopComparison,
+  shouldIndex,
+} from '@/lib/seo'
 
 describe('isTopCoin', () => {
   it.each(['btc', 'eth', 'sol', 'xrp', 'ada', 'doge', 'bnb', 'avax', 'dot', 'link'])(
@@ -72,5 +79,24 @@ describe('shouldIndex', () => {
   it('always noindexes tax pages regardless of slug', () => {
     expect(shouldIndex('tax', 'btc')).toEqual({ index: false, follow: true })
     expect(shouldIndex('tax', 'matic')).toEqual({ index: false, follow: true })
+  })
+})
+
+describe('focused traffic targets', () => {
+  it('targets the English BTC, ETH, and SOL coin pages', () => {
+    expect(isFocusedTrafficCoin('btc')).toBe(true)
+    expect(isFocusedTrafficCoin('eth')).toBe(true)
+    expect(isFocusedTrafficCoin('sol')).toBe(true)
+    expect(isFocusedTrafficCoin('xrp')).toBe(false)
+  })
+
+  it('targets only the Korean BTC coin page in this phase', () => {
+    expect(isFocusedTrafficKoreanCoin('btc')).toBe(true)
+    expect(isFocusedTrafficKoreanCoin('eth')).toBe(false)
+  })
+
+  it('targets only BTC vs ETH as the focused comparison page', () => {
+    expect(isFocusedTrafficComparison('btc-vs-eth')).toBe(true)
+    expect(isFocusedTrafficComparison('eth-vs-sol')).toBe(false)
   })
 })

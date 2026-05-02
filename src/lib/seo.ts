@@ -50,3 +50,25 @@ export function shouldIndex(type: PageType, slug: string): Metadata['robots'] {
   }
   return { index: isTopCoin(slug), follow: true }
 }
+
+export const FOCUSED_TRAFFIC_COIN_SLUGS = ['btc', 'eth', 'sol'] as const
+export const FOCUSED_TRAFFIC_KO_COIN_SLUGS = ['btc'] as const
+export const FOCUSED_TRAFFIC_COMPARISON_SLUGS = ['btc-vs-eth'] as const
+
+const FOCUSED_TRAFFIC_COIN_SET: ReadonlySet<string> = new Set(FOCUSED_TRAFFIC_COIN_SLUGS)
+const FOCUSED_TRAFFIC_KO_COIN_SET: ReadonlySet<string> = new Set(FOCUSED_TRAFFIC_KO_COIN_SLUGS)
+const FOCUSED_TRAFFIC_COMPARISON_SET: ReadonlySet<string> = new Set(
+  FOCUSED_TRAFFIC_COMPARISON_SLUGS,
+)
+
+export function isFocusedTrafficCoin(slug: string): boolean {
+  return FOCUSED_TRAFFIC_COIN_SET.has(slug)
+}
+
+export function isFocusedTrafficKoreanCoin(slug: string): boolean {
+  return FOCUSED_TRAFFIC_KO_COIN_SET.has(slug)
+}
+
+export function isFocusedTrafficComparison(slug: string): boolean {
+  return FOCUSED_TRAFFIC_COMPARISON_SET.has(slug)
+}
