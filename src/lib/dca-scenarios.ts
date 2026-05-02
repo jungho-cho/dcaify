@@ -205,6 +205,18 @@ function scenarioKey(scenario: Pick<SeoScenario, 'amount' | 'label'>): string {
   return `${scenario.amount}:${scenario.label}`
 }
 
+function unavailableComparisonSnapshot(
+  leftCoin: CoinConfig,
+  rightCoin: CoinConfig,
+): ComparisonSeoUnavailableSnapshot {
+  return {
+    ok: false,
+    leftCoin,
+    rightCoin,
+    reason: 'price_data_unavailable',
+  }
+}
+
 function getFiveYearFromDate(now: Date): string {
   return toDateString(addUtcMonths(now, -59).getTime())
 }
@@ -349,12 +361,7 @@ export function computeComparisonSeoSnapshotFromPrices({
 }): ComparisonSeoSnapshot {
   const overlappingPrices = getOverlappingPrices(leftPrices, rightPrices)
   if (!overlappingPrices) {
-    return {
-      ok: false,
-      leftCoin,
-      rightCoin,
-      reason: 'price_data_unavailable',
-    }
+    return unavailableComparisonSnapshot(leftCoin, rightCoin)
   }
 
   const left = computeCoinSeoSnapshotFromPrices({
@@ -369,14 +376,10 @@ export function computeComparisonSeoSnapshotFromPrices({
   })
 
   if (!left.ok || !right.ok) {
-    return {
-      ok: false,
-      leftCoin,
-      rightCoin,
-      reason: 'price_data_unavailable',
-    }
+    return unavailableComparisonSnapshot(leftCoin, rightCoin)
   }
 
+  const expectedScenarioRowCount = SEO_MONTHLY_AMOUNTS.length * SEO_SCENARIO_WINDOWS.length
   const rightScenarios = new Map(right.scenarioMatrix.map((scenario) => [scenarioKey(scenario), scenario]))
   const scenarioRows = left.scenarioMatrix.flatMap((leftScenario) => {
     const rightScenario = rightScenarios.get(scenarioKey(leftScenario))
@@ -396,6 +399,20 @@ export function computeComparisonSeoSnapshotFromPrices({
       right: rightScenario,
     }
   })
+
+  const hasMismatchedScenarioRow = scenarioRows.some((row) =>
+    row.left.startDate !== row.right.startDate ||
+    row.left.endDate !== row.right.endDate ||
+    row.left.adjustedStartDate !== row.right.adjustedStartDate ||
+    row.amount !== row.left.amount ||
+    row.amount !== row.right.amount ||
+    row.label !== row.left.label ||
+    row.label !== row.right.label,
+  )
+
+  if (scenarioRows.length !== expectedScenarioRowCount || hasMismatchedScenarioRow) {
+    return unavailableComparisonSnapshot(leftCoin, rightCoin)
+  }
 
   return {
     ok: true,

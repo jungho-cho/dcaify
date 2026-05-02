@@ -31,6 +31,19 @@ function monthlyPrices(startYear: number, endYear: number, price: number): Price
   return prices
 }
 
+function monthlyPricesOnDay(startYear: number, endYear: number, day: number, price: number): PricePoint[] {
+  const prices: PricePoint[] = []
+  for (let year = startYear; year <= endYear; year += 1) {
+    for (let month = 0; month < 12; month += 1) {
+      prices.push({
+        timestamp: Date.UTC(year, month, day),
+        price,
+      })
+    }
+  }
+  return prices
+}
+
 describe('calculateAssetMaxDrawdownPct', () => {
   it('returns the largest peak-to-trough asset drawdown', () => {
     expect(calculateAssetMaxDrawdownPct([
@@ -192,5 +205,38 @@ describe('computeComparisonSeoSnapshotFromPrices', () => {
     expect(snapshot.right.defaultScenario.label).toBe('3y')
     expect(snapshot.left.defaultScenario.startDate).toBe(snapshot.right.defaultScenario.startDate)
     expect(snapshot.left.defaultScenario.endDate).toBe(snapshot.right.defaultScenario.endDate)
+  })
+
+  it('rejects day-of-month mismatched comparisons instead of returning empty successful rows', () => {
+    const btc = getCoinBySlug('btc')
+    const eth = getCoinBySlug('eth')
+    if (!btc || !eth) throw new Error('coin fixtures missing')
+
+    const snapshot = computeComparisonSeoSnapshotFromPrices({
+      leftCoin: btc,
+      rightCoin: eth,
+      leftPrices: monthlyPricesOnDay(2021, 2025, 1, 100),
+      rightPrices: monthlyPricesOnDay(2021, 2025, 15, 200),
+    })
+
+    if (!snapshot.ok) {
+      expect(snapshot).toEqual({
+        ok: false,
+        leftCoin: btc,
+        rightCoin: eth,
+        reason: 'price_data_unavailable',
+      })
+      return
+    }
+
+    expect(snapshot.scenarioRows).toHaveLength(12)
+    for (const row of snapshot.scenarioRows) {
+      expect(row.left.startDate).toBe(row.right.startDate)
+      expect(row.left.endDate).toBe(row.right.endDate)
+      expect(row.amount).toBe(row.left.amount)
+      expect(row.amount).toBe(row.right.amount)
+      expect(row.label).toBe(row.left.label)
+      expect(row.label).toBe(row.right.label)
+    }
   })
 })
