@@ -185,7 +185,7 @@ function buildRiskMetrics(prices: PricePoint[], scenario: SeoScenario): SeoRiskM
   }
 }
 
-function getDefaultScenario(scenarios: SeoScenario[]): SeoScenario {
+function getDefaultScenario(scenarios: SeoScenario[]): SeoScenario | undefined {
   const defaultAmountScenarios = [...scenarios]
     .filter((scenario) => scenario.amount === 100)
     .sort((a, b) => b.years - a.years)

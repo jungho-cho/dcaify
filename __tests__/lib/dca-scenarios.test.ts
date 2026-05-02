@@ -219,24 +219,11 @@ describe('computeComparisonSeoSnapshotFromPrices', () => {
       rightPrices: monthlyPricesOnDay(2021, 2025, 15, 200),
     })
 
-    if (!snapshot.ok) {
-      expect(snapshot).toEqual({
-        ok: false,
-        leftCoin: btc,
-        rightCoin: eth,
-        reason: 'price_data_unavailable',
-      })
-      return
-    }
-
-    expect(snapshot.scenarioRows).toHaveLength(12)
-    for (const row of snapshot.scenarioRows) {
-      expect(row.left.startDate).toBe(row.right.startDate)
-      expect(row.left.endDate).toBe(row.right.endDate)
-      expect(row.amount).toBe(row.left.amount)
-      expect(row.amount).toBe(row.right.amount)
-      expect(row.label).toBe(row.left.label)
-      expect(row.label).toBe(row.right.label)
-    }
+    expect(snapshot).toEqual({
+      ok: false,
+      leftCoin: btc,
+      rightCoin: eth,
+      reason: 'price_data_unavailable',
+    })
   })
 })
