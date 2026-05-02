@@ -44,6 +44,24 @@ function monthlyPricesOnDay(startYear: number, endYear: number, day: number, pri
   return prices
 }
 
+function monthEndPrices(startDate: string, endDate: string, price: number): PricePoint[] {
+  const prices: PricePoint[] = []
+  const current = new Date(`${startDate}T00:00:00Z`)
+  const end = new Date(`${endDate}T00:00:00Z`)
+
+  while (current <= end) {
+    const year = current.getUTCFullYear()
+    const month = current.getUTCMonth()
+    prices.push({
+      timestamp: Date.UTC(year, month + 1, 0),
+      price,
+    })
+    current.setUTCMonth(month + 1, 1)
+  }
+
+  return prices
+}
+
 describe('calculateAssetMaxDrawdownPct', () => {
   it('returns the largest peak-to-trough asset drawdown', () => {
     expect(calculateAssetMaxDrawdownPct([
@@ -130,6 +148,28 @@ describe('computeCoinSeoSnapshotFromPrices', () => {
       lang: 'en',
       reason: 'price_data_unavailable',
     })
+  })
+
+  it('keeps month-end one-year scenarios aligned to twelve monthly purchases', () => {
+    const coin = getCoinBySlug('btc')
+    if (!coin) throw new Error('BTC fixture missing')
+
+    const snapshot = computeCoinSeoSnapshotFromPrices({
+      coin,
+      lang: 'en',
+      prices: monthEndPrices('2024-04-30', '2025-03-31', 100),
+    })
+
+    expect(snapshot.ok).toBe(true)
+    if (!snapshot.ok) throw new Error('expected success snapshot')
+
+    expect(snapshot.asOfDate).toBe('2025-03-31')
+    expect(snapshot.defaultScenario.amount).toBe(100)
+    expect(snapshot.defaultScenario.label).toBe('1y')
+    expect(snapshot.defaultScenario.startDate).toBe('2024-04-30')
+    expect(snapshot.defaultScenario.adjustedStartDate).toBe('2024-04-30')
+    expect(snapshot.defaultScenario.result.purchases).toHaveLength(12)
+    expect(snapshot.defaultScenario.result.totalInvested).toBe(1200)
   })
 
   it('returns a fetch-failed snapshot when the async builder cannot fetch prices', async () => {

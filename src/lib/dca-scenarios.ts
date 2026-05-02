@@ -94,7 +94,11 @@ function toDateString(timestamp: number): string {
 }
 
 function addUtcMonths(date: Date, months: number): Date {
-  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + months, date.getUTCDate()))
+  const target = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 1))
+  target.setUTCMonth(target.getUTCMonth() + months)
+  const lastDay = new Date(Date.UTC(target.getUTCFullYear(), target.getUTCMonth() + 1, 0)).getUTCDate()
+  target.setUTCDate(Math.min(date.getUTCDate(), lastDay))
+  return target
 }
 
 function getScenarioStartDate(endTimestamp: number, windowMonths: number): string {
