@@ -18,6 +18,7 @@ import {
 interface ComparisonCalculatorProps {
   leftCoin: CoinConfig
   rightCoin: CoinConfig
+  headingLevel?: 'h1' | 'h2'
 }
 
 interface ComparisonLeg {
@@ -83,7 +84,8 @@ function ComparisonResultCard({ coin, result }: { coin: CoinConfig; result: DcaR
   )
 }
 
-export default function ComparisonCalculator({ leftCoin, rightCoin }: ComparisonCalculatorProps) {
+export default function ComparisonCalculator({ leftCoin, rightCoin, headingLevel = 'h1' }: ComparisonCalculatorProps) {
+  const Heading = headingLevel
   const [amount, setAmount] = useState('100')
   const [frequency, setFrequency] = useState<Frequency>('monthly')
   const [startDate, setStartDate] = useState('2020-01-01')
@@ -203,9 +205,9 @@ export default function ComparisonCalculator({ leftCoin, rightCoin }: Comparison
   return (
     <div className="space-y-5">
       <div className="space-y-2">
-        <h1 className="text-3xl font-bold" style={{ fontFamily: 'var(--font-display)' }}>
+        <Heading className="text-3xl font-bold" style={{ fontFamily: 'var(--font-display)' }}>
           {leftCoin.name} vs {rightCoin.name} DCA Comparison
-        </h1>
+        </Heading>
         <p style={{ color: ds.textMuted }}>
           Use one set of assumptions, then see which asset handled that exact DCA plan better.
         </p>

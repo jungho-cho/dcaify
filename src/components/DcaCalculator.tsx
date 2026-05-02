@@ -28,6 +28,7 @@ interface Props {
   relatedCoins?: CoinConfig[]
   analyticsContext?: 'coin_calculator' | 'tax_page'
   showTaxBanner?: boolean
+  headingLevel?: 'h1' | 'h2'
 }
 
 type UiState = 'initial' | 'loading' | 'success' | 'error' | 'rate_limited'
@@ -54,10 +55,12 @@ export default function DcaCalculator({
   relatedCoins,
   analyticsContext = 'coin_calculator',
   showTaxBanner = lang === 'ko',
+  headingLevel = 'h1',
 }: Props) {
   const s = getStrings(lang)
   const taxStatus = getKoreanTaxStatus(lang)
   const coin = defaultCoin
+  const Heading = headingLevel
 
   const [amount, setAmount] = useState('100')
   const [frequency, setFrequency] = useState<Frequency>('monthly')
@@ -248,9 +251,9 @@ export default function DcaCalculator({
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-2xl sm:text-3xl font-bold mb-1" style={{ fontFamily: 'var(--font-display)' }}>
+        <Heading className="text-2xl sm:text-3xl font-bold mb-1" style={{ fontFamily: 'var(--font-display)' }}>
           {coin.name} DCA {lang === 'ko' ? '계산기' : 'Calculator'}
-        </h1>
+        </Heading>
         <p style={{ color: ds.textMuted, fontSize: '0.875rem' }}>{s.tagline(coin.name)}</p>
       </div>
 
