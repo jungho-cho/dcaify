@@ -13,6 +13,7 @@ const eslintConfig = defineConfig([
     "build/**",
     "next-env.d.ts",
     // Generated deployment output:
+    ".worktrees/**",
     ".open-next/**",
     ".wrangler/**",
   ]),
