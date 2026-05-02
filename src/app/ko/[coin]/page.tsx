@@ -2,9 +2,11 @@ import { notFound } from 'next/navigation'
 import { Metadata } from 'next'
 import Link from 'next/link'
 import { getCoinBySlug, SUPPORTED_COINS } from '@/lib/coins'
-import { shouldIndex } from '@/lib/seo'
+import { buildCoinSeoSnapshot } from '@/lib/dca-scenarios'
+import { isFocusedTrafficKoreanCoin, shouldIndex } from '@/lib/seo'
 import DcaCalculator from '@/components/DcaCalculator'
 import Nav from '@/components/Nav'
+import CoinSeoSnapshotView from '@/components/seo/CoinSeoSnapshot'
 
 interface Props {
   params: Promise<{ coin: string }>
@@ -58,13 +60,22 @@ export default async function KoCoinPage({ params }: Props) {
   const relatedCoins = SUPPORTED_COINS.filter(
     (c) => c.category === coin.category && c.slug !== coin.slug,
   ).slice(0, 5)
+  const seoSnapshot = isFocusedTrafficKoreanCoin(slug)
+    ? await buildCoinSeoSnapshot({ coin, lang: 'ko' })
+    : null
 
   return (
     <>
     <Nav lang="ko" />
     <main className="min-h-screen bg-gray-950 text-white">
       <div className="max-w-4xl mx-auto px-4 py-8">
-        <DcaCalculator defaultCoin={coin} lang="ko" relatedCoins={relatedCoins} />
+        {seoSnapshot ? <CoinSeoSnapshotView snapshot={seoSnapshot} /> : null}
+        <DcaCalculator
+          defaultCoin={coin}
+          lang="ko"
+          relatedCoins={relatedCoins}
+          headingLevel={seoSnapshot ? 'h2' : 'h1'}
+        />
         <div className="mt-6 text-center space-x-4">
           <Link
             href={`/ko/${coin.slug}/guide`}

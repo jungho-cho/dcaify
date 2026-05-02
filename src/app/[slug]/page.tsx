@@ -4,8 +4,11 @@ import Link from 'next/link'
 import ComparisonCalculator from '@/components/ComparisonCalculator'
 import DcaCalculator from '@/components/DcaCalculator'
 import Nav from '@/components/Nav'
+import CoinSeoSnapshotView from '@/components/seo/CoinSeoSnapshot'
+import ComparisonSeoSnapshotView from '@/components/seo/ComparisonSeoSnapshot'
 import { getCoinBySlug, getComparisonPairs, SUPPORTED_COINS } from '@/lib/coins'
-import { shouldIndex } from '@/lib/seo'
+import { buildCoinSeoSnapshot, buildComparisonSeoSnapshot } from '@/lib/dca-scenarios'
+import { isFocusedTrafficCoin, isFocusedTrafficComparison, shouldIndex } from '@/lib/seo'
 
 function CoinJsonLd({ coin }: { coin: { name: string; symbol: string; slug: string } }) {
   const schema = {
@@ -115,9 +118,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 }
 
-function ComparisonPage({ slug }: { slug: string }) {
+async function ComparisonPage({ slug }: { slug: string }) {
   const pair = getComparisonBySlug(slug)
   if (!pair) notFound()
+
+  const seoSnapshot = isFocusedTrafficComparison(slug)
+    ? await buildComparisonSeoSnapshot({ leftCoin: pair.coin1, rightCoin: pair.coin2 })
+    : null
 
   return (
     <>
@@ -125,18 +132,26 @@ function ComparisonPage({ slug }: { slug: string }) {
       <Nav />
       <main className="min-h-screen">
         <div className="max-w-5xl mx-auto px-4 py-8">
-          <ComparisonCalculator leftCoin={pair.coin1} rightCoin={pair.coin2} />
+          {seoSnapshot ? <ComparisonSeoSnapshotView snapshot={seoSnapshot} /> : null}
+          <ComparisonCalculator
+            leftCoin={pair.coin1}
+            rightCoin={pair.coin2}
+            headingLevel={seoSnapshot ? 'h2' : 'h1'}
+          />
         </div>
       </main>
     </>
   )
 }
 
-function CoinCalculatorPage({ slug }: { slug: string }) {
+async function CoinCalculatorPage({ slug }: { slug: string }) {
   const coin = getCoinBySlug(slug)
   if (!coin) notFound()
 
   const relatedCoins = SUPPORTED_COINS.filter((candidate) => candidate.category === coin.category && candidate.slug !== coin.slug).slice(0, 5)
+  const seoSnapshot = isFocusedTrafficCoin(slug)
+    ? await buildCoinSeoSnapshot({ coin, lang: 'en' })
+    : null
 
   return (
     <>
@@ -144,7 +159,12 @@ function CoinCalculatorPage({ slug }: { slug: string }) {
       <Nav />
       <main className="min-h-screen">
         <div className="max-w-4xl mx-auto px-4 py-8">
-          <DcaCalculator defaultCoin={coin} relatedCoins={relatedCoins} />
+          {seoSnapshot ? <CoinSeoSnapshotView snapshot={seoSnapshot} /> : null}
+          <DcaCalculator
+            defaultCoin={coin}
+            relatedCoins={relatedCoins}
+            headingLevel={seoSnapshot ? 'h2' : 'h1'}
+          />
           <div className="mt-6 text-center space-x-4">
             <Link href={`/${coin.slug}/guide`} className="text-sm hover:underline" style={{ color: 'var(--accent)' }}>
               Read the {coin.name} guide →
