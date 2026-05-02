@@ -9,20 +9,21 @@ export type ScenarioWindowLabel = '1y' | '3y' | '5y'
 export type SeoSnapshotUnavailableReason = 'price_data_unavailable' | 'price_fetch_failed'
 
 export interface SeoScenario {
-  amountPerMonth: number
-  window: ScenarioWindowLabel
+  amount: number
+  label: ScenarioWindowLabel
+  years: number
   startDate: string
   endDate: string
+  adjustedStartDate: string
   result: DcaResult
 }
 
 export interface DcaVsLumpSumSnapshot {
-  winner: 'dca' | 'lump_sum' | 'tie'
-  dcaCurrentValue: number
-  lumpSumCurrentValue: number
-  currentValueDelta: number
+  lumpSumValue: number
   lumpSumCoins: number
-  lumpSumStartPrice: number
+  dcaValue: number
+  difference: number
+  winner: 'dca' | 'lump_sum' | 'tie'
 }
 
 export interface SeoRiskMetrics {
@@ -36,7 +37,8 @@ export interface CoinSeoSuccessSnapshot {
   ok: true
   coin: CoinConfig
   lang: SeoLang
-  dataSource?: PricesResponse['dataSource']
+  asOfDate: string
+  dataSource: PricesResponse['dataSource'] | 'fixture'
   defaultScenario: SeoScenario
   scenarioMatrix: SeoScenario[]
   dcaVsLumpSum: DcaVsLumpSumSnapshot
@@ -53,11 +55,10 @@ export interface CoinSeoUnavailableSnapshot {
 export type CoinSeoSnapshot = CoinSeoSuccessSnapshot | CoinSeoUnavailableSnapshot
 
 export interface ComparisonScenarioRow {
-  amountPerMonth: number
-  window: ScenarioWindowLabel
+  amount: number
+  label: ScenarioWindowLabel
   left: SeoScenario
   right: SeoScenario
-  verdict: ComparisonVerdict
 }
 
 export interface ComparisonSeoSuccessSnapshot {
@@ -79,10 +80,10 @@ export type ComparisonSeoSnapshot = ComparisonSeoSuccessSnapshot | ComparisonSeo
 
 export const SEO_MONTHLY_AMOUNTS = [50, 100, 250, 500] as const
 export const SEO_SCENARIO_WINDOWS = [
-  { label: '1y', months: 12 },
-  { label: '3y', months: 36 },
-  { label: '5y', months: 60 },
-] as const satisfies readonly { label: ScenarioWindowLabel; months: number }[]
+  { label: '1y', months: 12, years: 1, minPurchases: 11 },
+  { label: '3y', months: 36, years: 3, minPurchases: 33 },
+  { label: '5y', months: 60, years: 5, minPurchases: 55 },
+] as const satisfies readonly { label: ScenarioWindowLabel; months: number; years: number; minPurchases: number }[]
 
 function sortPrices(prices: PricePoint[]): PricePoint[] {
   return [...prices].sort((a, b) => a.timestamp - b.timestamp)
@@ -113,62 +114,65 @@ function findNearestPrice(prices: PricePoint[], targetDate: string): PricePoint 
 
 function buildScenario(params: {
   prices: PricePoint[]
-  amountPerMonth: number
-  window: ScenarioWindowLabel
-  windowMonths: number
+  amount: number
+  window: (typeof SEO_SCENARIO_WINDOWS)[number]
 }): SeoScenario {
-  const { prices, amountPerMonth, window, windowMonths } = params
+  const { prices, amount, window } = params
   const endDate = toDateString(prices[prices.length - 1].timestamp)
-  const startDate = getScenarioStartDate(prices[prices.length - 1].timestamp, windowMonths)
+  const startDate = getScenarioStartDate(prices[prices.length - 1].timestamp, window.months)
+  const firstAvailableDate = toDateString(prices[0].timestamp)
+  const adjustedStartDate = startDate > firstAvailableDate ? startDate : firstAvailableDate
   const result = calculateDca({
     prices,
-    amountPerPeriod: amountPerMonth,
+    amountPerPeriod: amount,
     frequency: 'monthly',
-    startDate,
+    startDate: adjustedStartDate,
     endDate,
     currentPrice: getCurrentPrice(prices),
   })
 
   return {
-    amountPerMonth,
-    window,
+    amount,
+    label: window.label,
+    years: window.years,
     startDate,
     endDate,
+    adjustedStartDate,
     result,
   }
 }
 
 function buildScenarioMatrix(prices: PricePoint[]): SeoScenario[] {
-  return SEO_MONTHLY_AMOUNTS.flatMap((amountPerMonth) =>
-    SEO_SCENARIO_WINDOWS.map((window) =>
-      buildScenario({
+  return SEO_MONTHLY_AMOUNTS.flatMap((amount) =>
+    SEO_SCENARIO_WINDOWS.flatMap((window) => {
+      const scenario = buildScenario({
         prices,
-        amountPerMonth,
-        window: window.label,
-        windowMonths: window.months,
-      }),
-    ),
+        amount,
+        window,
+      })
+
+      return scenario.result.purchases.length > 0 ? [scenario] : []
+    }),
   )
 }
 
 function buildDcaVsLumpSum(prices: PricePoint[], scenario: SeoScenario): DcaVsLumpSumSnapshot {
-  const lumpSumStartPrice = findNearestPrice(prices, scenario.startDate).price
+  const lumpSumStartPrice = findNearestPrice(prices, scenario.adjustedStartDate).price
   const lumpSumCoins = scenario.result.totalInvested / lumpSumStartPrice
-  const lumpSumCurrentValue = lumpSumCoins * getCurrentPrice(prices)
-  const currentValueDelta = scenario.result.currentValue - lumpSumCurrentValue
+  const lumpSumValue = lumpSumCoins * getCurrentPrice(prices)
+  const difference = scenario.result.currentValue - lumpSumValue
 
   let winner: DcaVsLumpSumSnapshot['winner'] = 'tie'
-  if (Math.abs(currentValueDelta) >= 0.01) {
-    winner = currentValueDelta > 0 ? 'dca' : 'lump_sum'
+  if (Math.abs(difference) >= 0.01) {
+    winner = difference > 0 ? 'dca' : 'lump_sum'
   }
 
   return {
-    winner,
-    dcaCurrentValue: scenario.result.currentValue,
-    lumpSumCurrentValue,
-    currentValueDelta,
+    lumpSumValue,
     lumpSumCoins,
-    lumpSumStartPrice,
+    dcaValue: scenario.result.currentValue,
+    difference,
+    winner,
   }
 }
 
@@ -182,7 +186,23 @@ function buildRiskMetrics(prices: PricePoint[], scenario: SeoScenario): SeoRiskM
 }
 
 function getDefaultScenario(scenarios: SeoScenario[]): SeoScenario {
-  return scenarios.find((scenario) => scenario.amountPerMonth === 100 && scenario.window === '5y') ?? scenarios[0]
+  const defaultAmountScenarios = [...scenarios]
+    .filter((scenario) => scenario.amount === 100)
+    .sort((a, b) => b.years - a.years)
+
+  return defaultAmountScenarios.find((scenario) => {
+    const window = SEO_SCENARIO_WINDOWS.find((candidate) => candidate.label === scenario.label)
+    return window ? scenario.result.purchases.length >= window.minPurchases : false
+  }) ?? scenarios[0]
+}
+
+function hasAdequateCoverage(scenario: SeoScenario): boolean {
+  const window = SEO_SCENARIO_WINDOWS.find((candidate) => candidate.label === scenario.label)
+  return Boolean(window && scenario.result.purchases.length >= window.minPurchases)
+}
+
+function scenarioKey(scenario: Pick<SeoScenario, 'amount' | 'label'>): string {
+  return `${scenario.amount}:${scenario.label}`
 }
 
 function getFiveYearFromDate(now: Date): string {
@@ -223,7 +243,7 @@ export function computeCoinSeoSnapshotFromPrices({
   coin: CoinConfig
   lang: SeoLang
   prices: PricePoint[]
-  dataSource?: PricesResponse['dataSource']
+  dataSource?: PricesResponse['dataSource'] | 'fixture'
 }): CoinSeoSnapshot {
   if (prices.length === 0) {
     return {
@@ -238,15 +258,47 @@ export function computeCoinSeoSnapshotFromPrices({
   const scenarioMatrix = buildScenarioMatrix(sortedPrices)
   const defaultScenario = getDefaultScenario(scenarioMatrix)
 
+  if (!defaultScenario || !hasAdequateCoverage(defaultScenario)) {
+    return {
+      ok: false,
+      coin,
+      lang,
+      reason: 'price_data_unavailable',
+    }
+  }
+
   return {
     ok: true,
     coin,
     lang,
-    dataSource,
+    asOfDate: toDateString(sortedPrices[sortedPrices.length - 1].timestamp),
+    dataSource: dataSource ?? 'fixture',
     defaultScenario,
     scenarioMatrix,
     dcaVsLumpSum: buildDcaVsLumpSum(sortedPrices, defaultScenario),
     risk: buildRiskMetrics(sortedPrices, defaultScenario),
+  }
+}
+
+function getOverlappingPrices(leftPrices: PricePoint[], rightPrices: PricePoint[]): {
+  left: PricePoint[]
+  right: PricePoint[]
+} | null {
+  if (leftPrices.length === 0 || rightPrices.length === 0) return null
+
+  const sortedLeft = sortPrices(leftPrices)
+  const sortedRight = sortPrices(rightPrices)
+  const sharedStart = Math.max(sortedLeft[0].timestamp, sortedRight[0].timestamp)
+  const sharedEnd = Math.min(
+    sortedLeft[sortedLeft.length - 1].timestamp,
+    sortedRight[sortedRight.length - 1].timestamp,
+  )
+
+  if (sharedStart > sharedEnd) return null
+
+  return {
+    left: sortedLeft.filter((price) => price.timestamp >= sharedStart && price.timestamp <= sharedEnd),
+    right: sortedRight.filter((price) => price.timestamp >= sharedStart && price.timestamp <= sharedEnd),
   }
 }
 
@@ -295,15 +347,25 @@ export function computeComparisonSeoSnapshotFromPrices({
   leftPrices: PricePoint[]
   rightPrices: PricePoint[]
 }): ComparisonSeoSnapshot {
+  const overlappingPrices = getOverlappingPrices(leftPrices, rightPrices)
+  if (!overlappingPrices) {
+    return {
+      ok: false,
+      leftCoin,
+      rightCoin,
+      reason: 'price_data_unavailable',
+    }
+  }
+
   const left = computeCoinSeoSnapshotFromPrices({
     coin: leftCoin,
     lang: 'en',
-    prices: leftPrices,
+    prices: overlappingPrices.left,
   })
   const right = computeCoinSeoSnapshotFromPrices({
     coin: rightCoin,
     lang: 'en',
-    prices: rightPrices,
+    prices: overlappingPrices.right,
   })
 
   if (!left.ok || !right.ok) {
@@ -315,17 +377,23 @@ export function computeComparisonSeoSnapshotFromPrices({
     }
   }
 
-  const scenarioRows = left.scenarioMatrix.map((leftScenario, index) => {
-    const rightScenario = right.scenarioMatrix[index]
+  const rightScenarios = new Map(right.scenarioMatrix.map((scenario) => [scenarioKey(scenario), scenario]))
+  const scenarioRows = left.scenarioMatrix.flatMap((leftScenario) => {
+    const rightScenario = rightScenarios.get(scenarioKey(leftScenario))
+    if (
+      !rightScenario ||
+      leftScenario.startDate !== rightScenario.startDate ||
+      leftScenario.endDate !== rightScenario.endDate ||
+      leftScenario.adjustedStartDate !== rightScenario.adjustedStartDate
+    ) {
+      return []
+    }
+
     return {
-      amountPerMonth: leftScenario.amountPerMonth,
-      window: leftScenario.window,
+      amount: leftScenario.amount,
+      label: leftScenario.label,
       left: leftScenario,
       right: rightScenario,
-      verdict: buildComparisonVerdict({
-        left: leftScenario.result,
-        right: rightScenario.result,
-      }),
     }
   })
 
