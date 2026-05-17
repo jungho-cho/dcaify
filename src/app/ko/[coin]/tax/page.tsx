@@ -65,7 +65,7 @@ export default async function KoTaxPage({ params }: Props) {
         </div>
 
         {/* Calculator with Korean tax */}
-        <DcaCalculator defaultCoin={coin} lang="ko" analyticsContext="tax_page" showTaxBanner={false} />
+        <DcaCalculator defaultCoin={coin} lang="ko" analyticsContext="tax_page" />
 
         <div className="mt-8 space-y-4">
           <div className="bg-gray-900 rounded-2xl p-5">

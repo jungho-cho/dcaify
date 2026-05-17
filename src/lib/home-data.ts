@@ -65,18 +65,27 @@ function downsample(values: number[], n: number): number[] {
   return out
 }
 
-function buildSeries(result: DcaResult, currentPrice: number): HeroChartPoint[] {
+function buildSeries(result: DcaResult, currentPrice: number, endDate: string): HeroChartPoint[] {
   let cumCoins = 0
   let cumInvested = 0
-  return result.purchases.map((p) => {
+  const series: HeroChartPoint[] = result.purchases.map((p) => {
     cumCoins += p.coins
     cumInvested += p.amount
     return {
       date: p.date,
-      value: Number((cumCoins * currentPrice).toFixed(2)),
+      value: Number((cumCoins * p.price).toFixed(2)),
       invested: Number(cumInvested.toFixed(2)),
     }
   })
+  const last = series[series.length - 1]
+  if (last && last.date !== endDate) {
+    series.push({
+      date: endDate,
+      value: Number(result.currentValue.toFixed(2)),
+      invested: Number(result.totalInvested.toFixed(2)),
+    })
+  }
+  return series
 }
 
 function clampDate(date: string, lowerBound: string): string {
@@ -149,7 +158,7 @@ async function buildBtc(query: HomeQuery, today: string): Promise<HomeBtcResult 
     if (result.totalInvested <= 0) return null
 
     const breakEven = calculateBreakEven(result.totalInvested, result.totalCoins, 0)
-    const series = buildSeries(result, currentPrice)
+    const series = buildSeries(result, currentPrice, endDate)
     const years = yearsBetween(effectiveStart, endDate)
     const cagrPct = years > 0 && result.totalInvested > 0
       ? (((result.currentValue / result.totalInvested) ** (1 / years)) - 1) * 100

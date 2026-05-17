@@ -1,11 +1,11 @@
 import { notFound } from 'next/navigation'
 import { Metadata } from 'next'
-import Link from 'next/link'
 import { getCoinBySlug, SUPPORTED_COINS } from '@/lib/coins'
 import { buildCoinSeoSnapshot } from '@/lib/dca-scenarios'
 import { isFocusedTrafficKoreanCoin, shouldIndex } from '@/lib/seo'
 import DcaCalculator from '@/components/DcaCalculator'
-import Nav from '@/components/Nav'
+import Crumb from '@/components/terminal/Crumb'
+import PageShell from '@/components/terminal/PageShell'
 import CoinSeoSnapshotView from '@/components/seo/CoinSeoSnapshot'
 
 interface Props {
@@ -65,33 +65,15 @@ export default async function KoCoinPage({ params }: Props) {
     : null
 
   return (
-    <>
-    <Nav lang="ko" />
-    <main className="min-h-screen bg-gray-950 text-white">
-      <div className="max-w-4xl mx-auto px-4 py-8">
-        {seoSnapshot ? <CoinSeoSnapshotView snapshot={seoSnapshot} /> : null}
-        <DcaCalculator
-          defaultCoin={coin}
-          lang="ko"
-          relatedCoins={relatedCoins}
-          headingLevel={seoSnapshot ? 'h2' : 'h1'}
-        />
-        <div className="mt-6 text-center space-x-4">
-          <Link
-            href={`/ko/${coin.slug}/guide`}
-            className="text-blue-400 hover:underline text-sm"
-          >
-            {coin.name} 적립식 투자 가이드 →
-          </Link>
-          <Link
-            href={`/ko/${coin.slug}/tax`}
-            className="text-blue-400 hover:underline text-sm"
-          >
-            {coin.name} 세금 분석 →
-          </Link>
-        </div>
-      </div>
-    </main>
-    </>
+    <PageShell tab="home" lang="ko">
+      <Crumb path={`/ko/${coin.slug}`} />
+      {seoSnapshot ? <CoinSeoSnapshotView snapshot={seoSnapshot} /> : null}
+      <DcaCalculator
+        defaultCoin={coin}
+        lang="ko"
+        relatedCoins={relatedCoins}
+        headingLevel={seoSnapshot ? 'h2' : 'h1'}
+      />
+    </PageShell>
   )
 }

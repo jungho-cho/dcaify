@@ -1,9 +1,9 @@
 import { notFound, redirect } from 'next/navigation'
 import type { Metadata } from 'next'
-import Link from 'next/link'
 import ComparisonCalculator from '@/components/ComparisonCalculator'
 import DcaCalculator from '@/components/DcaCalculator'
-import Nav from '@/components/Nav'
+import Crumb from '@/components/terminal/Crumb'
+import PageShell from '@/components/terminal/PageShell'
 import CoinSeoSnapshotView from '@/components/seo/CoinSeoSnapshot'
 import ComparisonSeoSnapshotView from '@/components/seo/ComparisonSeoSnapshot'
 import { getCoinBySlug, getComparisonPairs, SUPPORTED_COINS } from '@/lib/coins'
@@ -129,17 +129,15 @@ async function ComparisonPage({ slug }: { slug: string }) {
   return (
     <>
       <ComparisonJsonLd slug={slug} coin1={pair.coin1} coin2={pair.coin2} />
-      <Nav />
-      <main className="min-h-screen">
-        <div className="max-w-5xl mx-auto px-4 py-8">
-          {seoSnapshot ? <ComparisonSeoSnapshotView snapshot={seoSnapshot} /> : null}
-          <ComparisonCalculator
-            leftCoin={pair.coin1}
-            rightCoin={pair.coin2}
-            headingLevel={seoSnapshot ? 'h2' : 'h1'}
-          />
-        </div>
-      </main>
+      <PageShell tab="compare">
+        <Crumb path={`/${slug}`} />
+        {seoSnapshot ? <ComparisonSeoSnapshotView snapshot={seoSnapshot} /> : null}
+        <ComparisonCalculator
+          leftCoin={pair.coin1}
+          rightCoin={pair.coin2}
+          headingLevel={seoSnapshot ? 'h2' : 'h1'}
+        />
+      </PageShell>
     </>
   )
 }
@@ -156,22 +154,15 @@ async function CoinCalculatorPage({ slug }: { slug: string }) {
   return (
     <>
       <CoinJsonLd coin={coin} />
-      <Nav />
-      <main className="min-h-screen">
-        <div className="max-w-4xl mx-auto px-4 py-8">
-          {seoSnapshot ? <CoinSeoSnapshotView snapshot={seoSnapshot} /> : null}
-          <DcaCalculator
-            defaultCoin={coin}
-            relatedCoins={relatedCoins}
-            headingLevel={seoSnapshot ? 'h2' : 'h1'}
-          />
-          <div className="mt-6 text-center space-x-4">
-            <Link href={`/${coin.slug}/guide`} className="text-sm hover:underline" style={{ color: 'var(--accent)' }}>
-              Read the {coin.name} guide →
-            </Link>
-          </div>
-        </div>
-      </main>
+      <PageShell tab="home">
+        <Crumb path={`/${coin.slug}`} />
+        {seoSnapshot ? <CoinSeoSnapshotView snapshot={seoSnapshot} /> : null}
+        <DcaCalculator
+          defaultCoin={coin}
+          relatedCoins={relatedCoins}
+          headingLevel={seoSnapshot ? 'h2' : 'h1'}
+        />
+      </PageShell>
     </>
   )
 }

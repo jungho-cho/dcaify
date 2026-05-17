@@ -1,25 +1,18 @@
 'use client'
 
-import { useMemo, useState } from 'react'
-import {
-  Area,
-  AreaChart,
-  CartesianGrid,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from 'recharts'
 import Link from 'next/link'
-import TaxStatusBanner from '@/components/TaxStatusBanner'
-import TrustExplanation from '@/components/TrustExplanation'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import AsciiHeader from '@/components/terminal/AsciiHeader'
+import { getCoinAscii } from '@/components/terminal/ascii'
+import HeroChart from '@/components/terminal/HeroChart'
+import HR from '@/components/terminal/HR'
+import Panel from '@/components/terminal/Panel'
 import { trackEvent } from '@/lib/analytics'
 import { getCalculatorErrorMessage } from '@/lib/calculator-errors'
-import { type DcaResult, calculateBreakEven, calculateDca, type Frequency } from '@/lib/dca'
-import { formatPct, formatUsd } from '@/lib/formatters'
+import { calculateBreakEven, calculateDca, type DcaResult, type Frequency } from '@/lib/dca'
 import type { CoinConfig } from '@/lib/coins'
+import { formatPct, formatUsd } from '@/lib/formatters'
 import { fetchPricesForRange } from '@/lib/prices-client'
-import { getKoreanTaxStatus } from '@/lib/tax-status'
 import { type Lang, getStrings } from '@/lib/strings'
 
 interface Props {
@@ -27,175 +20,168 @@ interface Props {
   lang?: Lang
   relatedCoins?: CoinConfig[]
   analyticsContext?: 'coin_calculator' | 'tax_page'
-  showTaxBanner?: boolean
   headingLevel?: 'h1' | 'h2'
 }
 
 type UiState = 'initial' | 'loading' | 'success' | 'error' | 'rate_limited'
 
-const ds = {
-  surface: '#141926',
-  border: '#1E293B',
-  textMuted: '#64748B',
-  textFaint: '#475569',
-  accent: '#38BDF8',
-  profit: '#34D399',
-  profitBg: 'rgba(6, 78, 59, 0.25)',
-  profitStroke: '#10B981',
-  loss: '#F87171',
-  lossBg: 'rgba(69, 10, 10, 0.25)',
-  lossStroke: '#EF4444',
-  grid: '#1E293B',
-  tooltipBg: '#141926',
+const TODAY = (): string => new Date().toISOString().slice(0, 10)
+
+function yearsAgo(years: number): string {
+  const d = new Date()
+  d.setUTCFullYear(d.getUTCFullYear() - years)
+  return d.toISOString().slice(0, 10)
 }
+
+function clampStart(date: string, listing: string): string {
+  return date < listing ? listing : date
+}
+
+interface PresetDef {
+  id: string
+  label: string
+  amount: string
+  frequency: Frequency
+  yearsBack: number | 'listing'
+}
+
+const PRESETS: PresetDef[] = [
+  { id: 'wk-5y', label: '$50/wk · 5y',    amount: '50',  frequency: 'weekly',  yearsBack: 5 },
+  { id: 'mo-5y', label: '$100/mo · 5y',   amount: '100', frequency: 'monthly', yearsBack: 5 },
+  { id: 'mo-3y', label: '$200/mo · 3y',   amount: '200', frequency: 'monthly', yearsBack: 3 },
+  { id: 'mo-1y', label: '$500/mo · 1y',   amount: '500', frequency: 'monthly', yearsBack: 1 },
+  { id: 'listing', label: 'since-listing', amount: '100', frequency: 'monthly', yearsBack: 'listing' },
+]
 
 export default function DcaCalculator({
   defaultCoin,
   lang = 'en',
   relatedCoins,
   analyticsContext = 'coin_calculator',
-  showTaxBanner = lang === 'ko',
   headingLevel = 'h1',
 }: Props) {
   const s = getStrings(lang)
-  const taxStatus = getKoreanTaxStatus(lang)
   const coin = defaultCoin
-  const Heading = headingLevel
 
+  const initialStart = clampStart('2020-01-01', coin.listingDate)
   const [amount, setAmount] = useState('100')
   const [frequency, setFrequency] = useState<Frequency>('monthly')
-  const [startDate, setStartDate] = useState(() => (coin.listingDate > '2020-01-01' ? coin.listingDate : '2020-01-01'))
-  const [endDate, setEndDate] = useState(new Date().toISOString().slice(0, 10))
+  const [startDate, setStartDate] = useState(initialStart)
+  const [endDate, setEndDate] = useState(TODAY())
   const [uiState, setUiState] = useState<UiState>('initial')
   const [result, setResult] = useState<DcaResult | null>(null)
+  const [currentPrice, setCurrentPrice] = useState<number | null>(null)
   const [dataSource, setDataSource] = useState<'live' | 'cache' | 'stale'>('cache')
-  const [validationError, setValidationError] = useState<string | null>(null)
-  const [partialWarning, setPartialWarning] = useState<string | null>(null)
-  const [effectiveStartDate, setEffectiveStartDate] = useState<string | null>(null)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
+  const [effectiveStartDate, setEffectiveStartDate] = useState<string>(initialStart)
+
+  const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const validate = (): string | null => {
     const amt = parseFloat(amount)
     if (isNaN(amt) || amt <= 0) return s.invalidAmount
-    const today = new Date().toISOString().slice(0, 10)
+    const today = TODAY()
     if (startDate > today) return s.startInFuture
     if (endDate > today) return s.endInFuture
     if (startDate >= endDate) return s.endBeforeStart
-
     const startYear = new Date(startDate).getFullYear()
     const endYear = new Date(endDate).getFullYear()
     if (endYear - startYear > 10) return s.maxRange
-    if (startDate < coin.listingDate) return s.listingDateError(coin.name, coin.listingDate)
-
     return null
   }
 
-  const handleCalculate = async () => {
-    setValidationError(null)
-    setPartialWarning(null)
-    setEffectiveStartDate(null)
-    setErrorMsg(null)
-
+  async function runCalculation() {
     const validationMessage = validate()
     if (validationMessage) {
-      setValidationError(validationMessage)
+      setErrorMsg(validationMessage)
+      setUiState('error')
       return
     }
-
+    setErrorMsg(null)
     setUiState('loading')
     const parsedAmount = parseFloat(amount)
+    const requestStart = clampStart(startDate, coin.listingDate)
+    setEffectiveStartDate(requestStart)
 
-    trackEvent('calculator_submit', {
-      context: analyticsContext,
-      coin: coin.slug,
-      lang,
-      frequency,
-    })
-    if (analyticsContext === 'tax_page') {
-      trackEvent('tax_page_calculate_click', { coin: coin.slug })
-    }
+    trackEvent('calculator_submit', { context: analyticsContext, coin: coin.slug, lang, frequency })
+    if (analyticsContext === 'tax_page') trackEvent('tax_page_calculate_click', { coin: coin.slug })
 
     try {
-      const response = await fetchPricesForRange({ coinId: coin.id, from: startDate, to: endDate })
-
+      const response = await fetchPricesForRange({ coinId: coin.id, from: requestStart, to: endDate })
       if (!response.ok) {
-        const message = getCalculatorErrorMessage(response.category, lang, response.payload)
-        setErrorMsg(message)
+        setErrorMsg(getCalculatorErrorMessage(response.category, lang, response.payload))
         setUiState(response.category === 'rate_limited' ? 'rate_limited' : 'error')
-        trackEvent('calculator_error', {
-          context: analyticsContext,
-          coin: coin.slug,
-          lang,
-          category: response.category,
-        })
+        trackEvent('calculator_error', { context: analyticsContext, coin: coin.slug, lang, category: response.category })
         return
       }
-
       setDataSource(response.data.dataSource)
       if (response.data.prices.length === 0) {
         setErrorMsg(getCalculatorErrorMessage('no_data', lang))
         setUiState('error')
-        trackEvent('calculator_error', {
-          context: analyticsContext,
-          coin: coin.slug,
-          lang,
-          category: 'no_data',
-        })
         return
       }
-
-      const firstPriceDate = new Date(response.data.prices[0].timestamp).toISOString().slice(0, 10)
-      if (firstPriceDate > startDate) {
-        setEffectiveStartDate(firstPriceDate)
-        setPartialWarning(s.partialWarning(coin.name, firstPriceDate))
-      }
-
-      const currentPrice = response.data.prices[response.data.prices.length - 1].price
+      const last = response.data.prices[response.data.prices.length - 1]
+      const price = last.price
       const dcaResult = calculateDca({
         prices: response.data.prices,
         amountPerPeriod: parsedAmount,
         frequency,
-        startDate,
+        startDate: requestStart,
         endDate,
-        currentPrice,
+        currentPrice: price,
       })
-
       setResult(dcaResult)
+      setCurrentPrice(price)
       setUiState('success')
-      trackEvent('calculator_success', {
-        context: analyticsContext,
-        coin: coin.slug,
-        lang,
-        data_source: response.data.dataSource,
-      })
+      trackEvent('calculator_success', { context: analyticsContext, coin: coin.slug, lang, data_source: response.data.dataSource })
     } catch {
       setErrorMsg(getCalculatorErrorMessage('unknown', lang))
       setUiState('error')
-      trackEvent('calculator_error', {
-        context: analyticsContext,
-        coin: coin.slug,
-        lang,
-        category: 'unknown',
-      })
     }
   }
 
-  const chartData = useMemo(() => {
+  // Run on mount + on any input change (debounced).
+  useEffect(() => {
+    if (debounceTimer.current) clearTimeout(debounceTimer.current)
+    debounceTimer.current = setTimeout(() => {
+      void runCalculation()
+    }, 250)
+    return () => {
+      if (debounceTimer.current) clearTimeout(debounceTimer.current)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [amount, frequency, startDate, endDate, coin.slug])
+
+  const series = useMemo(() => {
+    if (!result || currentPrice === null) return []
+    const out: { date: string; value: number; invested: number }[] = []
+    let cumCoins = 0
+    let cumInvested = 0
+    for (const p of result.purchases) {
+      cumCoins += p.coins
+      cumInvested += p.amount
+      out.push({
+        date: p.date,
+        value: Number((cumCoins * p.price).toFixed(2)),
+        invested: Number(cumInvested.toFixed(2)),
+      })
+    }
+    const last = out[out.length - 1]
+    if (last && last.date !== endDate) {
+      out.push({
+        date: endDate,
+        value: Number(result.currentValue.toFixed(2)),
+        invested: Number(result.totalInvested.toFixed(2)),
+      })
+    }
+    return out
+  }, [result, currentPrice, endDate])
+
+  const purchasesSample = useMemo(() => {
     if (!result) return []
-
-    const pricePerCoin = result.totalCoins > 0 ? result.currentValue / result.totalCoins : 0
-    let cumulativeCoins = 0
-    let cumulativeInvested = 0
-
-    return result.purchases.map((purchase) => {
-      cumulativeCoins += purchase.coins
-      cumulativeInvested += purchase.amount
-      return {
-        date: purchase.date,
-        value: parseFloat((cumulativeCoins * pricePerCoin).toFixed(2)),
-        invested: parseFloat(cumulativeInvested.toFixed(2)),
-      }
-    })
+    if (result.purchases.length <= 12) return result.purchases
+    const step = (result.purchases.length - 1) / 11
+    return Array.from({ length: 12 }, (_, i) => result.purchases[Math.round(i * step)])
   }, [result])
 
   const breakEven = result && result.totalCoins > 0
@@ -203,316 +189,612 @@ export default function DcaCalculator({
     : null
 
   const isProfit = result ? result.roi >= 0 : false
-  const today = new Date().toISOString().slice(0, 10)
-  const isHistorical = endDate < today
+  const delta = result ? result.currentValue - result.totalInvested : 0
   const shareText = result
     ? s.shareText(coin.name, formatUsd(parseFloat(amount)), s[frequency], formatPct(result.roi), formatUsd(result.currentValue))
     : ''
+  const tweetHref = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`
   const langPrefix = lang === 'ko' ? '/ko' : ''
 
-  const faqItems = lang === 'ko'
-    ? [
-        {
-          question: '적립식 투자(DCA)란 무엇인가요?',
-          answer: `적립식 투자(Dollar Cost Averaging)는 가격에 관계없이 정기적으로 일정 금액을 투자하는 전략입니다. 예를 들어 매달 10만 원씩 ${coin.name}을 매수하면, 고점과 저점 모두에서 매수하여 평균 매입 단가를 낮출 수 있습니다.`,
-        },
-        {
-          question: `${coin.name}에 매달 얼마를 투자해야 하나요?`,
-          answer: '투자 금액은 개인의 재정 상황에 따라 다릅니다. 잃어도 괜찮은 금액부터 시작하세요. 중요한 건 금액보다 꾸준함입니다.',
-        },
-        {
-          question: '언제 시작하는 게 가장 좋나요?',
-          answer: 'DCA의 핵심은 시장 타이밍을 맞추지 않는 것입니다. 완벽한 진입 시점을 찾기보다, 감당 가능한 금액으로 지금부터 일관되게 시작하는 편이 더 현실적입니다.',
-        },
-        {
-          question: '한국 세금은 어떻게 반영하나요?',
-          answer: `${taxStatus.faqLine} 손익분기점은 참고용 시나리오이며, 실제 신고 전에 최신 공지를 다시 확인해야 합니다.`,
-        },
-      ]
-    : [
-        {
-          question: 'What is Dollar Cost Averaging (DCA)?',
-          answer: `DCA means investing a fixed amount on a recurring schedule, regardless of price. For ${coin.name}, that could be $100 every month or $25 every week.`,
-        },
-        {
-          question: `How much should I invest in ${coin.name}?`,
-          answer: 'Use an amount you can repeat comfortably. The useful habit is consistency, not heroically sizing one perfect buy.',
-        },
-        {
-          question: 'Is DCA better than lump-sum investing?',
-          answer: 'Lump sum often wins statistically, but DCA wins on repeatability. It reduces timing risk and makes volatile assets easier to hold through.',
-        },
-        {
-          question: 'What does the break-even price mean?',
-          answer: `It is the price ${coin.symbol} needs to reach for you to recover your principal. Korean pages also show an estimated tax-aware scenario using the current DCAify tax assumptions.`,
-        },
-      ]
+  // Compute CAGR + max drawdown for the metric grid.
+  const { cagrPct, maxDrawdown } = useMemo(() => {
+    if (!result) return { cagrPct: null as number | null, maxDrawdown: null as { pct: number; date: string } | null }
+    const years = (new Date(endDate).getTime() - new Date(effectiveStartDate).getTime()) / (365.25 * 24 * 3600 * 1000)
+    const cagr = years > 0 && result.totalInvested > 0
+      ? (((result.currentValue / result.totalInvested) ** (1 / years)) - 1) * 100
+      : null
+
+    let cumCoins = 0
+    let cumInvested = 0
+    let peak = 0
+    let dd: { pct: number; date: string } | null = null
+    for (const p of result.purchases) {
+      cumCoins += p.coins
+      cumInvested += p.amount
+      const value = cumCoins * p.price
+      if (value > peak) peak = value
+      else if (peak > 0) {
+        const drawdown = ((value - peak) / peak) * 100
+        if (!dd || drawdown < dd.pct) dd = { pct: drawdown, date: p.date }
+      }
+      // Track invested-relative drawdown as well so a flat start still registers losses
+      if (cumInvested > 0 && value < cumInvested) {
+        const drawdown = ((value - cumInvested) / cumInvested) * 100
+        if (!dd || drawdown < dd.pct) dd = { pct: drawdown, date: p.date }
+      }
+    }
+    return { cagrPct: cagr, maxDrawdown: dd }
+  }, [result, effectiveStartDate, endDate])
+
+  function applyPreset(p: PresetDef) {
+    setAmount(p.amount)
+    setFrequency(p.frequency)
+    if (p.yearsBack === 'listing') {
+      setStartDate(coin.listingDate)
+    } else {
+      setStartDate(clampStart(yearsAgo(p.yearsBack), coin.listingDate))
+    }
+    setEndDate(TODAY())
+  }
+
+  function activePresetId(): string | null {
+    for (const p of PRESETS) {
+      if (p.amount !== amount) continue
+      if (p.frequency !== frequency) continue
+      const expected = p.yearsBack === 'listing'
+        ? coin.listingDate
+        : clampStart(yearsAgo(p.yearsBack), coin.listingDate)
+      if (expected === startDate) return p.id
+    }
+    return null
+  }
+  const activePreset = activePresetId()
+
+  const ascii = getCoinAscii(coin.slug)
+  const subtitleEn = `see what consistent ${coin.name.toLowerCase()} buys would be worth today · binance · 1d closes`
+  const subtitleKo = `${coin.name} 적립식 매수의 현재 가치 · 바이낸스 · 1일 종가`
+
+  const Heading = headingLevel
 
   return (
-    <div className="space-y-5">
-      <div>
-        <Heading className="text-2xl sm:text-3xl font-bold mb-1" style={{ fontFamily: 'var(--font-display)' }}>
-          {coin.name} DCA {lang === 'ko' ? '계산기' : 'Calculator'}
-        </Heading>
-        <p style={{ color: ds.textMuted, fontSize: '0.875rem' }}>{s.tagline(coin.name)}</p>
-      </div>
+    <div style={{ marginTop: 4 }}>
+      <Heading className="sr-only">{coin.name} DCA {lang === 'ko' ? '계산기' : 'Calculator'}</Heading>
+      <AsciiHeader lines={ascii} subtitle={lang === 'ko' ? subtitleKo : subtitleEn} />
 
-      <div className="p-5 space-y-4" style={{ background: ds.surface, border: `1px solid ${ds.border}`, borderRadius: 'var(--radius-lg)' }}>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm mb-1" style={{ color: ds.textMuted }}>{s.investmentLabel}</label>
-            <input
-              type="number"
-              min="1"
-              value={amount}
-              onChange={(event) => setAmount(event.target.value)}
-              className="w-full px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-500/40"
-              placeholder="100"
-              style={{ background: 'var(--bg)', border: `1px solid ${ds.border}`, borderRadius: 'var(--radius-sm)', color: 'var(--text)' }}
-            />
-          </div>
-          <div>
-            <label className="block text-sm mb-1" style={{ color: ds.textMuted }}>{s.frequencyLabel}</label>
-            <select
-              value={frequency}
-              onChange={(event) => setFrequency(event.target.value as Frequency)}
-              className="w-full px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-500/40"
-              style={{ background: 'var(--bg)', border: `1px solid ${ds.border}`, borderRadius: 'var(--radius-sm)', color: 'var(--text)' }}
-            >
-              <option value="daily">{s.daily}</option>
-              <option value="weekly">{s.weekly}</option>
-              <option value="monthly">{s.monthly}</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm mb-1" style={{ color: ds.textMuted }}>{s.startDate}</label>
-            <input
-              type="date"
-              value={startDate}
-              min={coin.listingDate}
-              max={endDate}
-              onChange={(event) => setStartDate(event.target.value)}
-              className="w-full px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-500/40"
-              style={{ background: 'var(--bg)', border: `1px solid ${ds.border}`, borderRadius: 'var(--radius-sm)', color: 'var(--text)' }}
-            />
-          </div>
-          <div>
-            <label className="block text-sm mb-1" style={{ color: ds.textMuted }}>{s.endDate}</label>
-            <input
-              type="date"
-              value={endDate}
-              min={startDate}
-              max={today}
-              onChange={(event) => setEndDate(event.target.value)}
-              className="w-full px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-500/40"
-              style={{ background: 'var(--bg)', border: `1px solid ${ds.border}`, borderRadius: 'var(--radius-sm)', color: 'var(--text)' }}
-            />
-          </div>
+      {/* Prompt (editable) */}
+      <Panel>
+        <div style={{ color: 'var(--muted)', fontSize: 11, marginBottom: 6 }}>
+          # {lang === 'ko' ? '어떤 플래그든 값을 클릭해 편집 · 자동으로 재계산' : 'click any flag value to edit · auto-recomputes'}
         </div>
-
-        {validationError && <p className="text-sm" style={{ color: ds.loss }}>{validationError}</p>}
-
-        <button
-          onClick={handleCalculate}
-          disabled={uiState === 'loading'}
-          className="w-full font-semibold py-3 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          style={{ background: ds.accent, color: '#0B0F19', borderRadius: 'var(--radius-lg)' }}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: 0,
+            fontSize: 14,
+            lineHeight: 1.8,
+          }}
         >
-          {uiState === 'loading' ? s.calculating : s.calculateBtn}
-        </button>
-      </div>
-
-      {uiState === 'initial' && (
-        <div className="p-8 text-center border-dashed" style={{ border: `1px dashed ${ds.border}`, borderRadius: 'var(--radius-lg)', color: ds.textFaint }}>
-          <p className="text-sm">
-            {lang === 'ko'
-              ? `위 설정을 확인하고 "${s.calculateBtn}"를 눌러 ${coin.name} 적립식 투자 결과를 확인하세요.`
-              : `Set the schedule above, then hit "${s.calculateBtn}" to see your ${coin.name} DCA result.`}
-          </p>
+          <span style={{ color: 'var(--accent)' }}>$ </span>
+          <span style={{ color: 'var(--fg)' }}>dca</span>
+          <FlagReadonly k="--coin" v={coin.slug} />
+          <FlagInput k="--amount" value={amount} onChange={setAmount} width={70} />
+          <FlagSelect
+            k="--freq"
+            value={frequency}
+            onChange={(v) => setFrequency(v as Frequency)}
+            options={[
+              { label: 'daily', value: 'daily' },
+              { label: 'weekly', value: 'weekly' },
+              { label: 'monthly', value: 'monthly' },
+            ]}
+          />
+          <FlagInput
+            k="--from"
+            value={startDate}
+            onChange={setStartDate}
+            type="date"
+            min={coin.listingDate}
+            max={endDate}
+            width={130}
+          />
+          <FlagInput
+            k="--to"
+            value={endDate}
+            onChange={setEndDate}
+            type="date"
+            min={startDate}
+            max={TODAY()}
+            width={130}
+          />
+          <span
+            aria-hidden
+            style={{
+              display: 'inline-block',
+              background: 'var(--accent)',
+              width: 9,
+              height: 16,
+              marginLeft: 6,
+              verticalAlign: 'middle',
+              animation: 'trmBlink 1s steps(2) infinite',
+            }}
+          />
         </div>
-      )}
 
-      {uiState === 'loading' && (
-        <div className="space-y-4 animate-pulse">
-          <div className="h-28" style={{ background: ds.surface, borderRadius: 'var(--radius-lg)' }} />
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {[...Array(4)].map((_, index) => (
-              <div key={index} className="h-20" style={{ background: ds.surface, borderRadius: 'var(--radius-lg)' }} />
-            ))}
-          </div>
-          <div className="h-64" style={{ background: ds.surface, borderRadius: 'var(--radius-lg)' }} />
+        <div style={{ marginTop: 12, display: 'flex', gap: 8, flexWrap: 'wrap', fontSize: 12 }}>
+          <span style={{ color: 'var(--muted)' }}>presets:</span>
+          {PRESETS.map((p) => {
+            const active = activePreset === p.id
+            return (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => applyPreset(p)}
+                style={{
+                  border: `1px solid ${active ? 'var(--accent)' : 'var(--border)'}`,
+                  color: active ? 'var(--accent)' : 'var(--fg-2)',
+                  background: active ? 'var(--accent-bg)' : 'var(--panel-2)',
+                  padding: '4px 10px',
+                  fontFamily: 'inherit',
+                  fontSize: 12,
+                  cursor: 'pointer',
+                }}
+              >
+                {p.label}
+              </button>
+            )
+          })}
+        </div>
+      </Panel>
+
+      <HR label="result" right={`data: ${dataSource} · binance.com/api/v3/klines`} />
+
+      {uiState === 'error' && errorMsg && (
+        <div
+          style={{
+            padding: '12px 16px',
+            background: 'rgba(255,92,68,0.10)',
+            border: '1px solid rgba(255,92,68,0.35)',
+            color: 'var(--loss)',
+            fontSize: 13,
+          }}
+        >
+          # error · {errorMsg}
         </div>
       )}
 
       {uiState === 'rate_limited' && (
-        <div className="p-4 text-sm" style={{ background: ds.lossBg, border: `1px solid ${ds.loss}40`, borderRadius: 'var(--radius-lg)', color: ds.loss }}>
-          {s.rateLimited}
+        <div
+          style={{
+            padding: '12px 16px',
+            background: 'rgba(244,185,66,0.10)',
+            border: '1px solid rgba(244,185,66,0.35)',
+            color: 'var(--amber)',
+            fontSize: 13,
+          }}
+        >
+          # rate_limited · {s.rateLimited}
         </div>
       )}
 
-      {uiState === 'error' && errorMsg && (
-        <div className="p-4 text-sm" style={{ background: ds.lossBg, border: `1px solid ${ds.loss}40`, borderRadius: 'var(--radius-lg)', color: ds.loss }}>
-          {errorMsg}
-        </div>
-      )}
-
-      {uiState === 'success' && dataSource === 'stale' && (
-        <div className="p-4 text-sm" style={{ background: 'rgba(251, 191, 36, 0.1)', border: `1px solid ${ds.textFaint}`, borderRadius: 'var(--radius-lg)', color: '#FBBF24' }}>
-          {s.staleWarning}
-        </div>
-      )}
-
-      {partialWarning && (
-        <div className="p-4 text-sm" style={{ background: 'rgba(251, 191, 36, 0.1)', border: `1px solid ${ds.textFaint}`, borderRadius: 'var(--radius-lg)', color: '#FBBF24' }}>
-          {partialWarning}
-        </div>
-      )}
-
-      {uiState === 'success' && result && (
-        <div className="space-y-4">
-          <div className="p-6 text-center" style={{ background: isProfit ? ds.profitBg : ds.lossBg, border: `1px solid ${isProfit ? ds.profit : ds.loss}30`, borderRadius: 'var(--radius-lg)' }}>
-            <p className="text-sm mb-1" style={{ color: ds.textMuted }}>{s.returnLabel}</p>
-            <p className="text-4xl sm:text-5xl font-bold tabular-nums" style={{ color: isProfit ? ds.profit : ds.loss, fontFamily: 'var(--font-display)' }}>
-              {formatPct(result.roi)}
-            </p>
-            <p className="text-sm mt-2 tabular-nums" style={{ color: ds.textMuted }}>
-              {formatUsd(result.totalInvested)} → {formatUsd(result.currentValue)}
-            </p>
-          </div>
-
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {[
-              { label: s.totalInvested, value: formatUsd(result.totalInvested) },
-              { label: isHistorical ? (lang === 'ko' ? '종료일 가치' : 'Value at end date') : s.currentValue, value: formatUsd(result.currentValue) },
-              { label: `${coin.symbol} ${s.accumulated}`, value: result.totalCoins.toFixed(6) },
-              { label: lang === 'ko' ? '매수 횟수' : 'Purchases', value: String(result.purchases.length) },
-            ].map((card) => (
-              <div key={card.label} className="p-4" style={{ background: ds.surface, border: `1px solid ${ds.border}`, borderRadius: 'var(--radius-lg)' }}>
-                <p className="text-xs mb-1" style={{ color: ds.textMuted }}>{card.label}</p>
-                <p className="text-lg font-bold tabular-nums">{card.value}</p>
-              </div>
-            ))}
-          </div>
-
-          {chartData.length > 0 && (
-            <div className="p-4" style={{ borderRadius: 'var(--radius-lg)' }}>
-              <h3 className="text-sm mb-4" style={{ color: ds.textMuted }}>{s.chartTitle}</h3>
-              <ResponsiveContainer width="100%" height={240} className="sm:!h-[288px]">
-                <AreaChart data={chartData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke={ds.grid} />
-                  <XAxis dataKey="date" tick={{ fill: ds.textMuted, fontSize: 11 }} tickFormatter={(value: string) => value.slice(0, 7)} interval="preserveStartEnd" />
-                  <YAxis tick={{ fill: ds.textMuted, fontSize: 11 }} tickFormatter={(value: number) => `$${(value / 1000).toFixed(0)}k`} width={55} />
-                  <Tooltip
-                    contentStyle={{ backgroundColor: ds.tooltipBg, border: `1px solid ${ds.border}`, borderRadius: 8 }}
-                    labelStyle={{ color: ds.textMuted }}
-                    formatter={(value, name) => [formatUsd(Number(value)), name === 'value' ? s.portfolioValue : s.totalInvested]}
-                  />
-                  <Area type="monotone" dataKey="invested" stroke={ds.textFaint} fill={ds.surface} strokeWidth={1} />
-                  <Area type="monotone" dataKey="value" stroke={isProfit ? ds.profitStroke : ds.lossStroke} fill={isProfit ? 'rgba(6, 78, 59, 0.3)' : 'rgba(69, 10, 10, 0.3)'} strokeWidth={2} />
-                </AreaChart>
-              </ResponsiveContainer>
+      {result && currentPrice !== null && (
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1.1fr)',
+            gap: 28,
+            alignItems: 'start',
+          }}
+        >
+          <div>
+            <div
+              style={{
+                color: 'var(--muted)',
+                fontSize: 11,
+                letterSpacing: '0.08em',
+                textTransform: 'uppercase',
+              }}
+            >
+              {lang === 'ko' ? '포트폴리오_가치' : 'portfolio_value'}
             </div>
-          )}
-
-          {breakEven && (
-            <div className="p-4" style={{ background: ds.surface, border: `1px solid ${ds.border}`, borderRadius: 'var(--radius-lg)' }}>
-              <h3 className="text-sm mb-3" style={{ color: ds.textMuted }}>{s.breakEvenTitle}</h3>
-              <div className={`grid ${lang === 'ko' ? 'grid-cols-2' : 'grid-cols-1'} gap-4`}>
-                <div>
-                  <p className="text-xs" style={{ color: ds.textFaint }}>{s.breakEvenPrice}</p>
-                  <p className="text-base font-semibold tabular-nums">{formatUsd(breakEven.breakEvenPrice)}</p>
-                </div>
-                {lang === 'ko' && (
-                  <div>
-                    <p className="text-xs" style={{ color: ds.textFaint }}>{taxStatus.shortLabel}</p>
-                    <p className="text-base font-semibold tabular-nums">{formatUsd(breakEven.breakEvenWithTax)}</p>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {showTaxBanner && <TaxStatusBanner lang={lang} compact />}
-
-          <TrustExplanation
-            coin={coin}
-            lang={lang}
-            result={result}
-            amountPerPeriod={parseFloat(amount)}
-            breakEvenPrice={breakEven?.breakEvenPrice}
-            dataSource={dataSource}
-            normalizedStartDate={effectiveStartDate}
-          />
-
-          <a
-            href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="block text-center text-sm font-medium py-3 transition-colors"
-            style={{ background: ds.surface, border: `1px solid ${ds.border}`, borderRadius: 'var(--radius-lg)', color: 'var(--text)' }}
-          >
-            {s.shareBtn}
-          </a>
-        </div>
-      )}
-
-      <div className="p-5 space-y-4 text-sm leading-relaxed" style={{ background: ds.surface, border: `1px solid ${ds.border}`, borderRadius: 'var(--radius-lg)', color: ds.textMuted }}>
-        <h2 className="text-lg font-semibold" style={{ color: 'var(--text)', fontFamily: 'var(--font-display)' }}>
-          {lang === 'ko' ? `왜 ${coin.name}에 적립식 투자를 할까요?` : `Why DCA into ${coin.name}?`}
-        </h2>
-        <p>{coin.description[lang === 'ko' ? 'ko' : 'en']}</p>
-        <h3 className="font-semibold" style={{ color: 'var(--text)' }}>
-          {lang === 'ko' ? `${coin.name} 적립식 투자 시작하기` : `How to start DCA into ${coin.name}`}
-        </h3>
-        <ol className="list-decimal list-inside space-y-1">
-          {lang === 'ko' ? (
-            <>
-              <li>암호화폐 거래소에서 반복 매수 일정을 정합니다.</li>
-              <li>감당 가능한 금액으로 꾸준히 매수합니다.</li>
-              <li>이 계산기로 수익률과 손익분기점을 주기적으로 점검합니다.</li>
-            </>
-          ) : (
-            <>
-              <li>Set a recurring buy plan on the exchange you already trust.</li>
-              <li>Use an amount you can repeat without stress.</li>
-              <li>Use this calculator to review the result and break-even level over time.</li>
-            </>
-          )}
-        </ol>
-      </div>
-
-      <div className="p-5 space-y-4 text-sm leading-relaxed" style={{ background: ds.surface, border: `1px solid ${ds.border}`, borderRadius: 'var(--radius-lg)', color: ds.textMuted }}>
-        <h2 className="text-lg font-semibold" style={{ color: 'var(--text)', fontFamily: 'var(--font-display)' }}>
-          {lang === 'ko' ? '자주 묻는 질문' : 'Frequently asked questions'}
-        </h2>
-        {faqItems.map((faq) => (
-          <details key={faq.question} className="group">
-            <summary className="cursor-pointer font-medium py-2 list-none flex items-center gap-2" style={{ color: 'var(--text)' }}>
-              <span className="text-xs transition-transform group-open:rotate-90" style={{ color: ds.accent }}>▶</span>
-              {faq.question}
-            </summary>
-            <p className="pl-5 pb-2">{faq.answer}</p>
-          </details>
-        ))}
-      </div>
-
-      {relatedCoins && relatedCoins.length > 0 && (
-        <div className="p-4" style={{ background: ds.surface, border: `1px solid ${ds.border}`, borderRadius: 'var(--radius-lg)' }}>
-          <h3 className="text-sm mb-3" style={{ color: ds.textMuted }}>{lang === 'ko' ? '다른 코인 DCA 계산기' : 'Other DCA Calculators'}</h3>
-          <div className="flex gap-2 flex-wrap">
-            {relatedCoins.map((relatedCoin) => (
-              <Link
-                key={relatedCoin.id}
-                href={`${langPrefix}/${relatedCoin.slug}`}
-                className="px-3 py-1.5 text-sm font-medium transition-colors"
-                style={{ background: 'var(--bg)', border: `1px solid ${ds.border}`, borderRadius: 'var(--radius-sm)', color: ds.textMuted }}
+            <HeroNumber value={result.currentValue} size={64} />
+            <div style={{ marginTop: 10, fontSize: 17, color: isProfit ? 'var(--profit)' : 'var(--loss)' }}>
+              {delta >= 0 ? '+' : ''}{formatUsd(delta)}
+              <span
+                style={{
+                  background: isProfit ? 'var(--accent-bg)' : 'rgba(255,92,68,0.12)',
+                  padding: '2px 8px',
+                  marginLeft: 10,
+                }}
               >
-                {relatedCoin.symbol}
+                {formatPct(result.roi)}
+              </span>
+              <span style={{ color: 'var(--muted)', fontSize: 13, marginLeft: 10 }}>
+                {lang === 'ko' ? '대비' : 'roi vs'} {formatUsd(result.totalInvested)} {lang === 'ko' ? '투입' : 'in'}
+              </span>
+            </div>
+
+            <div
+              className="tabular-nums"
+              style={{
+                marginTop: 24,
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr',
+                gap: '6px 24px',
+                fontSize: 13,
+              }}
+            >
+              {[
+                [lang === 'ko' ? '총_투자금' : 'total_invested', formatUsd(result.totalInvested)],
+                [`${coin.symbol.toLowerCase()}_accumulated`, result.totalCoins.toFixed(6)],
+                [lang === 'ko' ? '평균_매수단가' : 'avg_buy_price', formatUsd(breakEven?.breakEvenPrice ?? 0)],
+                [lang === 'ko' ? '현재가' : 'current_price', formatUsd(currentPrice)],
+                [lang === 'ko' ? '손익분기' : 'breakeven_price', formatUsd(breakEven?.breakEvenPrice ?? 0)],
+                [lang === 'ko' ? '매수_횟수' : 'n_purchases', `${result.purchases.length} / ${result.purchases.length} ok`],
+                [lang === 'ko' ? '첫_매수' : 'first_buy', result.purchases[0]?.date ?? '—'],
+                [lang === 'ko' ? '마지막_매수' : 'last_buy', result.purchases[result.purchases.length - 1]?.date ?? '—'],
+                [
+                  lang === 'ko' ? '연복리' : 'cagr',
+                  cagrPct === null ? '—' : `${cagrPct >= 0 ? '+' : ''}${cagrPct.toFixed(1)}%`,
+                ],
+                [
+                  lang === 'ko' ? '최대_낙폭' : 'max_drawdown',
+                  maxDrawdown ? `${maxDrawdown.pct.toFixed(1)}% · ${maxDrawdown.date}` : '—',
+                ],
+              ].map(([k, v]) => (
+                <div
+                  key={k}
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    borderBottom: '1px dotted var(--faint)',
+                    padding: '3px 0',
+                  }}
+                >
+                  <span style={{ color: 'var(--muted)' }}>{k}</span>
+                  <span>{v}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <HeroChart data={series} height={260} />
+            <div style={{ display: 'flex', gap: 18, marginTop: 10, fontSize: 11, color: 'var(--muted)', flexWrap: 'wrap' }}>
+              <span>
+                <span
+                  style={{
+                    display: 'inline-block',
+                    width: 12,
+                    height: 2,
+                    background: 'var(--accent)',
+                    verticalAlign: 'middle',
+                    marginRight: 5,
+                  }}
+                />
+                {lang === 'ko' ? '포트폴리오' : 'portfolio'}
+              </span>
+              <span>
+                <span
+                  style={{
+                    display: 'inline-block',
+                    width: 12,
+                    borderTop: '1px dashed var(--muted)',
+                    verticalAlign: 'middle',
+                    marginRight: 5,
+                  }}
+                />
+                {lang === 'ko' ? '투자원금' : 'invested'}
+              </span>
+              <span style={{ marginLeft: 'auto', color: 'var(--muted)' }}>
+                {lang === 'ko' ? '월별 가격 데이터 위로 마우스 →' : 'hover any month for price detail →'}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Purchases sample */}
+      {result && purchasesSample.length > 0 && (
+        <>
+          <HR
+            label={`purchases · sample · ${purchasesSample.length} of ${result.purchases.length}`}
+            right={lang === 'ko' ? '모두 보기 → CSV (곧 추가)' : 'show all → CSV (soon)'}
+          />
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: '40px 130px minmax(140px, 1fr) 120px 120px 130px',
+              fontSize: 12.5,
+              color: 'var(--muted)',
+              borderBottom: '1px solid var(--border)',
+              paddingBottom: 6,
+              gap: 8,
+            }}
+          >
+            <span>#</span>
+            <span>DATE</span>
+            <span>SOURCE</span>
+            <span style={{ textAlign: 'right' }}>PRICE</span>
+            <span style={{ textAlign: 'right' }}>{coin.symbol}_BOUGHT</span>
+            <span style={{ textAlign: 'right' }}>RUN_VALUE</span>
+          </div>
+          {(() => {
+            let runCoins = 0
+            return purchasesSample.map((p, idx) => {
+              runCoins += p.coins
+              const runValue = runCoins * (currentPrice ?? p.price)
+              const realIndex = result.purchases.findIndex((pp) => pp.date === p.date) + 1
+              return (
+                <div
+                  key={`${p.date}-${idx}`}
+                  className="tabular-nums"
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: '40px 130px minmax(140px, 1fr) 120px 120px 130px',
+                    fontSize: 13,
+                    padding: '6px 0',
+                    borderBottom: '1px solid var(--faint)',
+                    gap: 8,
+                  }}
+                >
+                  <span style={{ color: 'var(--muted)' }}>{String(realIndex).padStart(2, '0')}</span>
+                  <span>{p.date}</span>
+                  <span style={{ color: 'var(--muted)' }}>{coin.binanceSymbol} 1d close</span>
+                  <span style={{ textAlign: 'right', color: 'var(--amber)' }}>{formatUsd(p.price)}</span>
+                  <span style={{ textAlign: 'right' }}>{p.coins.toFixed(6)}</span>
+                  <span style={{ textAlign: 'right', color: 'var(--profit)' }}>{formatUsd(runValue)}</span>
+                </div>
+              )
+            })
+          })()}
+        </>
+      )}
+
+      {/* Break-even + share */}
+      {breakEven && (
+        <>
+          <HR label="break_even · share" />
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 14 }}>
+            <Panel padding="14px 18px">
+              <div style={{ fontSize: 11, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                {lang === 'ko' ? '손익분기_가격' : 'break_even_price'}
+              </div>
+              <div className="tabular-nums" style={{ fontSize: 22, marginTop: 6, color: 'var(--amber)' }}>
+                {formatUsd(breakEven.breakEvenPrice)}
+              </div>
+              <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>
+                # {lang === 'ko'
+                  ? `${coin.symbol} 가격이 이 수준에 도달하면 원금 회수`
+                  : `price ${coin.symbol} must reach to recover principal`}
+              </div>
+            </Panel>
+            {lang === 'ko' && (
+              <Panel padding="14px 18px">
+                <div style={{ fontSize: 11, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                  break_even · kr_tax
+                </div>
+                <div className="tabular-nums" style={{ fontSize: 22, marginTop: 6, color: 'var(--amber)' }}>
+                  {formatUsd(breakEven.breakEvenWithTax)}
+                </div>
+                <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>
+                  # 22% 분리과세 가정
+                </div>
+              </Panel>
+            )}
+            <Panel padding="14px 18px">
+              <div style={{ fontSize: 11, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                share
+              </div>
+              <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
+                <a
+                  href={tweetHref}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ border: '1px solid var(--border)', padding: '4px 10px', fontSize: 12, color: 'var(--fg-2)', background: 'var(--panel-2)' }}
+                >
+                  $ tweet
+                </a>
+                <CopyUrlButton />
+              </div>
+            </Panel>
+          </div>
+          {lang === 'en' && (
+            <div style={{ marginTop: 10, fontSize: 12, color: 'var(--muted)' }}>
+              # need a tax-adjusted figure?{' '}
+              <Link href={`/ko/${coin.slug}/tax`} style={{ color: 'var(--accent)' }}>
+                $ tax --coin={coin.slug} --country=kr
+              </Link>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* FAQ */}
+      <HR label="faq" />
+      <FaqList coin={coin} lang={lang} />
+
+      {/* Related coins */}
+      {relatedCoins && relatedCoins.length > 0 && (
+        <>
+          <HR label="related" />
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            {relatedCoins.map((rc) => (
+              <Link
+                key={rc.id}
+                href={`${langPrefix}/${rc.slug}`}
+                style={{
+                  border: '1px solid var(--border)',
+                  padding: '6px 10px',
+                  fontSize: 12,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  color: 'var(--fg)',
+                }}
+              >
+                <span style={{ color: 'var(--accent)', fontWeight: 700 }}>{rc.symbol}</span>
+                <span style={{ color: 'var(--muted)' }}>{rc.name}</span>
               </Link>
             ))}
           </div>
-        </div>
+        </>
       )}
+    </div>
+  )
+}
+
+function FlagReadonly({ k, v }: { k: string; v: string }) {
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'center' }}>
+      <span style={{ color: 'var(--fg-2)' }}>&nbsp;{k}=</span>
+      <span style={{ color: 'var(--amber)', background: 'var(--amber-bg)', padding: '0 4px' }}>{v}</span>
+    </span>
+  )
+}
+
+function FlagInput({
+  k,
+  value,
+  onChange,
+  type = 'text',
+  min,
+  max,
+  width = 80,
+}: {
+  k: string
+  value: string
+  onChange: (v: string) => void
+  type?: string
+  min?: string
+  max?: string
+  width?: number
+}) {
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'center' }}>
+      <span style={{ color: 'var(--fg-2)' }}>&nbsp;{k}=</span>
+      <input
+        type={type}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        min={min}
+        max={max}
+        style={{
+          background: 'var(--amber-bg)',
+          color: 'var(--amber)',
+          border: 'none',
+          padding: '0 4px',
+          fontFamily: 'inherit',
+          fontSize: 'inherit',
+          width,
+          outline: 'none',
+        }}
+      />
+    </span>
+  )
+}
+
+function FlagSelect({
+  k,
+  value,
+  onChange,
+  options,
+}: {
+  k: string
+  value: string
+  onChange: (v: string) => void
+  options: Array<{ label: string; value: string }>
+}) {
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'center' }}>
+      <span style={{ color: 'var(--fg-2)' }}>&nbsp;{k}=</span>
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        style={{
+          background: 'var(--amber-bg)',
+          color: 'var(--amber)',
+          border: 'none',
+          padding: '0 4px',
+          fontFamily: 'inherit',
+          fontSize: 'inherit',
+          outline: 'none',
+          cursor: 'pointer',
+        }}
+      >
+        {options.map((o) => (
+          <option key={o.value} value={o.value}>{o.label}</option>
+        ))}
+      </select>
+    </span>
+  )
+}
+
+function HeroNumber({ value, size = 56 }: { value: number; size?: number }) {
+  const formatted = formatUsd(value)
+  const decimalIndex = formatted.lastIndexOf('.')
+  const integerPart = decimalIndex >= 0 ? formatted.slice(0, decimalIndex) : formatted
+  const decimalPart = decimalIndex >= 0 ? formatted.slice(decimalIndex) : ''
+  return (
+    <div
+      className="tabular-nums"
+      style={{ fontSize: size, lineHeight: 1, letterSpacing: '-0.02em', marginTop: 4 }}
+    >
+      {integerPart}
+      <span style={{ color: 'var(--muted)', fontSize: Math.round(size * 0.4) }}>{decimalPart}</span>
+    </div>
+  )
+}
+
+function CopyUrlButton() {
+  const [copied, setCopied] = useState(false)
+  return (
+    <button
+      type="button"
+      onClick={() => {
+        if (typeof window === 'undefined') return
+        navigator.clipboard.writeText(window.location.href)
+        setCopied(true)
+        setTimeout(() => setCopied(false), 1500)
+      }}
+      style={{
+        border: '1px solid var(--border)',
+        padding: '4px 10px',
+        fontSize: 12,
+        color: 'var(--fg-2)',
+        background: 'var(--panel-2)',
+        cursor: 'pointer',
+        fontFamily: 'inherit',
+      }}
+    >
+      {copied ? '$ copied' : '$ copy url'}
+    </button>
+  )
+}
+
+function FaqList({ coin, lang }: { coin: CoinConfig; lang: Lang }) {
+  const items = lang === 'ko'
+    ? [
+        { q: '? 적립식 투자(DCA)란 무엇인가요', a: `정기적으로 일정 금액을 매수하는 전략입니다. ${coin.name}이라면 매달 10만 원, 매주 2만 원처럼 가격과 무관하게 같은 금액으로 매수합니다.` },
+        { q: `? ${coin.name}에 매달 얼마를 투자해야 하나요`, a: '꾸준히 반복 가능한 금액부터 시작하세요. 한 번에 큰 금액보다 일관성이 더 큰 효과를 냅니다.' },
+        { q: '? 일시불 투자보다 유리한가요', a: '통계적으로는 일시불이 자주 이깁니다. 다만 적립식은 시장 타이밍 부담을 줄여 변동성이 큰 자산을 끝까지 들고 가기 쉬워집니다.' },
+        { q: '? 손익분기점은 어떻게 계산하나요', a: `${coin.symbol} 가격이 평균 매수단가에 도달하면 원금 기준 손익분기점입니다. 한국어 페이지에는 22% 세금을 반영한 시나리오도 함께 표시됩니다.` },
+      ]
+    : [
+        { q: '? what is dollar cost averaging', a: `DCA means investing a fixed amount on a recurring schedule, regardless of price. For ${coin.name}, that could be $100 every month or $25 every week.` },
+        { q: `? how much should I invest into ${coin.name.toLowerCase()}`, a: 'Use an amount you can repeat comfortably. The useful habit is consistency, not heroically sizing one perfect buy.' },
+        { q: '? is DCA better than lump-sum', a: 'Lump sum often wins statistically, but DCA wins on repeatability. It reduces timing risk and makes volatile assets easier to hold through.' },
+        { q: '? what does the break-even price mean', a: `The price ${coin.symbol} needs to reach so the dollar value of the bag equals total dollars invested. Korean pages also show a 22%-tax-adjusted scenario.` },
+      ]
+  return (
+    <div style={{ fontSize: 13, color: 'var(--fg-2)', lineHeight: 1.7, display: 'grid', gap: 14 }}>
+      {items.map((it) => (
+        <div key={it.q}>
+          <div style={{ color: 'var(--amber)' }}>{it.q}</div>
+          <div style={{ color: 'var(--fg-2)', paddingLeft: 16, marginTop: 2 }}>{it.a}</div>
+        </div>
+      ))}
     </div>
   )
 }
