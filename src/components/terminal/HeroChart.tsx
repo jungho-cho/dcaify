@@ -88,7 +88,7 @@ export default function HeroChart({
             padding: '6px 10px',
           }}
           labelStyle={{ color: 'var(--muted)' }}
-          formatter={(v: number, name: string) => [formatTooltip(v), name]}
+          formatter={(v, name) => [formatTooltip(Number(v)), String(name)]}
         />
         <Area
           type="monotone"

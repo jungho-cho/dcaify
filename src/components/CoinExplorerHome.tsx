@@ -1,275 +1,325 @@
-'use client'
-
-import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
-import Nav from '@/components/Nav'
-import NoResultsRecovery from '@/components/NoResultsRecovery'
-import { trackEvent } from '@/lib/analytics'
-import { SUPPORTED_COINS } from '@/lib/coins'
+import AsciiHeader from '@/components/terminal/AsciiHeader'
+import CoinTable from '@/components/terminal/CoinTable'
+import Crumb from '@/components/terminal/Crumb'
+import HeroChart from '@/components/terminal/HeroChart'
+import HR from '@/components/terminal/HR'
+import PageShell from '@/components/terminal/PageShell'
+import Panel from '@/components/terminal/Panel'
+import Prompt from '@/components/terminal/Prompt'
+import { formatPct, formatUsd } from '@/lib/formatters'
+import type { HomeData, HomeBtcResult } from '@/lib/home-data'
 
-const TOP_COINS = SUPPORTED_COINS.slice(0, 12)
+const HOME_ASCII = [
+  ' ____   ____    _     _   __',
+  '|  _ \\ / ___|  / \\   (_) / _|_   _',
+  '| | | | |     / _ \\  | || |_| | | |',
+  '| |_| | |___ / ___ \\ | ||  _| |_| |',
+  '|____/ \\____/_/   \\_\\|_||_|  \\__, |',
+  '                              |___/',
+]
 
 const COPY = {
   en: {
-    title: 'See what consistent crypto buys would be worth today',
-    subtitle:
-      'Backtest 29 coins with real Binance daily closes, clear result explanations, and Korean tax-aware scenarios.',
-    placeholder: 'Search by coin name or ticker, e.g. Bitcoin, ETH, Solana',
-    trust: ['29 supported coins', 'Real Binance daily closes', 'Results explained in plain English'],
-    featuredLinks: [
-      { href: '/btc', label: 'Start with Bitcoin' },
-      { href: '/eth', label: 'Try Ethereum' },
-      { href: '/btc-vs-eth', label: 'Compare BTC vs ETH' },
-    ],
-    sectionTitle: 'Pick a coin and run the backtest',
-    sectionDescription:
-      'Start with a major asset, or search by ticker. The goal is not to browse forever. It is to answer one investing question quickly.',
-    bodyTitle: 'Why people use DCAify',
-    bodyText:
-      'Most DCA calculators stop at a number. DCAify shows the number, explains what it means, and keeps the assumptions visible so the result feels trustworthy, not mysterious.',
-    featuredTitle: 'Useful starting points',
-    featuredDescription:
-      'If you are not sure where to start, run a Bitcoin backtest, compare BTC vs ETH, or check the Korean tax scenario page.',
-    recoverySuggestions: [
-      { href: '/btc', label: 'Bitcoin calculator' },
-      { href: '/eth', label: 'Ethereum calculator' },
-      { href: '/btc-vs-eth', label: 'BTC vs ETH comparison' },
-    ],
+    subtitle: 'honest, fast, reproducible · binance daily closes · every assumption visible',
+    promptHint: '# press ↑ to recall · click any flag to edit · ⇥ to autocomplete coins',
+    resolved: (n: number, freq: string, from: string, to: string) =>
+      `→ resolved · ${n} ${freq} buys · ${from} → ${to}`,
+    portfolioLabel: 'portfolio_value',
+    roiLabel: 'roi vs',
+    suggestions: ['$ dca --coin=eth', '$ dca --coin=sol --from=2021-01-01', '$ compare btc eth', '$ tax --country=kr', '$ man btc/guide'],
+    sectionHeads: { method: '# method', trust: '# trust', korean: '# 한국어' },
+    sectionBody: {
+      method:
+        'Daily closes from Binance public API. Buys placed at each scheduled close. Fees, slippage, and taxes are NOT applied to the headline number. Tax estimates live on per-coin pages.',
+      trust:
+        'Source code is open. Every flag in the URL is reproducible. Open any coin page to see the row of price data behind the result.',
+      korean:
+        '한국 거주자 양도세 시나리오는 코인별 페이지에서 250만 원 공제 후 22% 분리과세 가정으로 계산됩니다.',
+    },
+    legendPortfolio: 'portfolio',
+    legendInvested: 'invested',
+    nowLabel: 'now',
+    fallback: 'Could not load live BTC prices. The coin table below still works.',
   },
   ko: {
-    title: '지금까지 적립식으로 샀다면 얼마가 됐는지 바로 확인하세요',
-    subtitle:
-      '29개 코인의 실제 바이낸스 일별 종가를 바탕으로, 수익 계산과 해석, 한국어 세금 시나리오까지 한 번에 보여줍니다.',
-    placeholder: '코인 이름이나 심볼로 검색하세요. 예: Bitcoin, ETH, 솔라나',
-    trust: ['29개 코인 지원', '실제 바이낸스 일별 종가 사용', '결과 해석과 세금 시나리오 제공'],
-    featuredLinks: [
-      { href: '/ko/btc', label: '비트코인부터 시작' },
-      { href: '/ko/eth', label: '이더리움 계산' },
-      { href: '/btc-vs-eth', label: 'BTC vs ETH 비교 (영문)' },
-    ],
-    sectionTitle: '원하는 코인을 골라 바로 계산하세요',
-    sectionDescription:
-      '코인 목록을 구경하는 페이지가 아니라, 투자 질문 하나에 바로 답하는 도구로 설계했습니다.',
-    bodyTitle: '왜 DCAify를 쓰나요?',
-    bodyText:
-      '대부분의 계산기는 숫자만 보여줍니다. DCAify는 그 숫자가 왜 나왔는지, 어떤 전제를 썼는지, 한국 사용자에게 어떤 의미인지까지 같이 보여주려고 합니다.',
-    featuredTitle: '한국어 사용자에게 특히 유용한 시작점',
-    featuredDescription:
-      '비트코인 계산부터 시작하거나, 한글 가이드와 예상 세금 시나리오 페이지로 바로 들어가세요. 비교 페이지는 현재 영문으로 제공됩니다.',
-    recoverySuggestions: [
-      { href: '/ko/btc', label: '비트코인 계산기' },
-      { href: '/ko/eth', label: '이더리움 계산기' },
-      { href: '/ko/btc/tax', label: '비트코인 세금 시나리오' },
-    ],
+    subtitle: '정직하고 빠르고 재현 가능합니다 · 바이낸스 일별 종가 · 모든 가정을 공개합니다',
+    promptHint: '# ↑ 키로 이전 명령 · 어떤 플래그든 클릭해 편집 · ⇥ 키로 코인 자동완성',
+    resolved: (n: number, freq: string, from: string, to: string) =>
+      `→ 해석됨 · ${n}회 ${freq} 매수 · ${from} → ${to}`,
+    portfolioLabel: '포트폴리오_가치',
+    roiLabel: '수익률 대비',
+    suggestions: ['$ dca --coin=eth', '$ dca --coin=sol --from=2021-01-01', '$ compare btc eth', '$ tax --country=kr', '$ man btc/guide'],
+    sectionHeads: { method: '# 방법', trust: '# 신뢰', korean: '# 세금' },
+    sectionBody: {
+      method:
+        '바이낸스 공개 API의 일별 종가를 사용합니다. 예약된 종가에 매수가 체결됩니다. 수수료, 슬리피지, 세금은 헤드라인 숫자에 포함되지 않으며, 세금 시나리오는 코인별 페이지에서 별도로 계산합니다.',
+      trust:
+        '소스 코드는 공개되어 있고, URL의 모든 플래그가 그대로 재현 가능합니다. 어떤 코인 페이지든 들어가서 매수마다의 가격 데이터를 확인할 수 있습니다.',
+      korean:
+        '한국 거주자 양도세 시나리오는 한국어 코인 페이지(`/ko/btc/tax` 등)에서 250만 원 공제 후 22% 분리과세 가정으로 계산됩니다.',
+    },
+    legendPortfolio: '포트폴리오',
+    legendInvested: '투자원금',
+    nowLabel: '현재',
+    fallback: '실시간 BTC 가격을 불러오지 못했습니다. 아래 코인 테이블은 정상 동작합니다.',
   },
 } as const
 
+const FREQ_LABEL = {
+  en: { daily: 'daily', weekly: 'weekly', monthly: 'monthly' },
+  ko: { daily: '일별', weekly: '주별', monthly: '월별' },
+} as const
+
 interface CoinExplorerHomeProps {
+  data: HomeData
   lang?: 'en' | 'ko'
 }
 
-export default function CoinExplorerHome({ lang = 'en' }: CoinExplorerHomeProps) {
-  const [query, setQuery] = useState('')
-  const trackedNoResultsQuery = useRef<string | null>(null)
+export default function CoinExplorerHome({ data, lang = 'en' }: CoinExplorerHomeProps) {
   const copy = COPY[lang]
+  return (
+    <PageShell tab="home" lang={lang}>
+      <Crumb path={lang === 'ko' ? '/ko' : '/'} />
+      <AsciiHeader lines={HOME_ASCII} subtitle={copy.subtitle} />
 
-  const filtered = useMemo(() => {
-    if (!query.trim()) return TOP_COINS
+      {data.btc ? (
+        <HomeCalculator btc={data.btc} lang={lang} />
+      ) : (
+        <Panel>
+          <div style={{ color: 'var(--loss)', fontSize: 13 }}>{copy.fallback}</div>
+        </Panel>
+      )}
 
-    const normalized = query.toLowerCase()
-    return SUPPORTED_COINS.filter(
-      (coin) =>
-        coin.name.toLowerCase().includes(normalized) ||
-        coin.symbol.toLowerCase().includes(normalized) ||
-        coin.slug.toLowerCase().includes(normalized),
-    )
-  }, [query])
+      <CoinTable rows={data.rows} lang={lang} />
 
-  useEffect(() => {
-    if (!query.trim() || filtered.length > 0) {
-      trackedNoResultsQuery.current = null
-      return
-    }
+      <HR label={lang === 'ko' ? 'about · 면책 · 방법' : 'about · disclaimer · methods'} />
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+          gap: 28,
+          fontSize: 12.5,
+          color: 'var(--fg-2)',
+          lineHeight: 1.65,
+        }}
+      >
+        <div>
+          <div style={{ color: 'var(--accent)', marginBottom: 4 }}>{copy.sectionHeads.method}</div>
+          {copy.sectionBody.method}
+        </div>
+        <div>
+          <div style={{ color: 'var(--accent)', marginBottom: 4 }}>{copy.sectionHeads.trust}</div>
+          {copy.sectionBody.trust}
+        </div>
+        <div>
+          <div style={{ color: 'var(--accent)', marginBottom: 4 }}>{copy.sectionHeads.korean}</div>
+          {copy.sectionBody.korean}
+        </div>
+      </div>
+    </PageShell>
+  )
+}
 
-    if (trackedNoResultsQuery.current === query) return
-    trackedNoResultsQuery.current = query
-    trackEvent('search_no_results', { lang, query: query.trim() })
-  }, [filtered.length, lang, query])
-
-  const basePath = lang === 'ko' ? '/ko' : ''
+function HomeCalculator({ btc, lang }: { btc: HomeBtcResult; lang: 'en' | 'ko' }) {
+  const copy = COPY[lang]
+  const freqLabel = FREQ_LABEL[lang][btc.frequency]
+  const isProfit = btc.result.roi >= 0
+  const delta = btc.result.currentValue - btc.result.totalInvested
 
   return (
-    <>
-      <Nav lang={lang} />
-      <main className="min-h-screen">
-        <div className="max-w-5xl mx-auto px-4 py-10 sm:py-14">
-          <section className="space-y-6">
-            <div className="space-y-3 max-w-3xl">
-              <p className="text-xs font-semibold uppercase tracking-[0.16em]" style={{ color: 'var(--accent)' }}>
-                {lang === 'ko' ? 'Crypto DCA backtesting tool' : 'Crypto DCA backtesting tool'}
-              </p>
-              <h1 className="text-4xl sm:text-5xl font-bold" style={{ fontFamily: 'var(--font-display)' }}>
-                {copy.title}
-              </h1>
-              <p className="text-base sm:text-lg" style={{ color: 'var(--text-muted)' }}>
-                {copy.subtitle}
-              </p>
-            </div>
+    <Panel>
+      <Prompt
+        cmd="dca"
+        args={[
+          ['--coin', btc.coin.slug],
+          ['--amount', btc.amount],
+          ['--freq', btc.frequency],
+          ['--from', btc.effectiveStartDate],
+        ]}
+      />
+      <div style={{ color: 'var(--muted)', fontSize: 12, marginTop: 4 }}>{copy.promptHint}</div>
 
-            <div className="flex flex-wrap gap-2">
-              {copy.trust.map((item) => (
-                <span
-                  key={item}
-                  className="px-3 py-1.5 text-xs font-medium"
-                  style={{
-                    borderRadius: '999px',
-                    background: 'rgba(56, 189, 248, 0.08)',
-                    border: '1px solid rgba(56, 189, 248, 0.18)',
-                    color: 'var(--text)',
-                  }}
-                >
-                  {item}
-                </span>
-              ))}
+      <div
+        style={{
+          marginTop: 18,
+          borderTop: '1px dashed var(--border)',
+          paddingTop: 16,
+          display: 'grid',
+          gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1.1fr)',
+          gap: 32,
+          alignItems: 'start',
+        }}
+      >
+        <div>
+          <div style={{ color: 'var(--muted)', fontSize: 12 }}>
+            {copy.resolved(btc.result.purchases.length, freqLabel, btc.effectiveStartDate, btc.endDate)}
+          </div>
+          <div style={{ marginTop: 18 }}>
+            <div
+              style={{
+                color: 'var(--muted)',
+                fontSize: 11,
+                letterSpacing: '0.08em',
+                textTransform: 'uppercase',
+                marginBottom: 4,
+              }}
+            >
+              {copy.portfolioLabel}
             </div>
-
-            <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] items-start">
-              <input
-                type="text"
-                placeholder={copy.placeholder}
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                className="w-full px-4 py-3 focus:outline-none focus:ring-2 focus:ring-sky-500/40"
+            <HeroNumber value={btc.result.currentValue} />
+            <div style={{ marginTop: 8, fontSize: 16, color: isProfit ? 'var(--profit)' : 'var(--loss)' }}>
+              {delta >= 0 ? '+' : ''}{formatUsd(delta)}
+              <span
                 style={{
-                  background: 'var(--surface)',
-                  border: '1px solid var(--border)',
-                  borderRadius: 'var(--radius-sm)',
-                  color: 'var(--text)',
+                  background: isProfit ? 'var(--accent-bg)' : 'rgba(255,92,68,0.12)',
+                  padding: '2px 8px',
+                  marginLeft: 10,
+                  color: isProfit ? 'var(--profit)' : 'var(--loss)',
+                }}
+              >
+                {formatPct(btc.result.roi)}
+              </span>
+              <span style={{ color: 'var(--muted)', fontSize: 13, marginLeft: 10 }}>
+                {copy.roiLabel} {formatUsd(btc.result.totalInvested)}
+              </span>
+            </div>
+          </div>
+          <MetricGrid btc={btc} lang={lang} />
+        </div>
+        <div>
+          <HeroChart data={btc.series} height={240} />
+          <div style={{ display: 'flex', gap: 16, marginTop: 10, fontSize: 11, color: 'var(--muted)' }}>
+            <span>
+              <span
+                style={{
+                  display: 'inline-block',
+                  width: 12,
+                  height: 2,
+                  background: 'var(--accent)',
+                  verticalAlign: 'middle',
+                  marginRight: 5,
                 }}
               />
-              <div className="flex flex-wrap gap-2">
-                {copy.featuredLinks.map((item) => (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className="px-3 py-3 text-sm font-medium"
-                    style={{
-                      borderRadius: 'var(--radius-sm)',
-                      background: 'var(--surface)',
-                      border: '1px solid var(--border)',
-                      color: 'var(--text)',
-                    }}
-                  >
-                    {item.label}
-                  </Link>
-                ))}
-              </div>
-            </div>
-          </section>
-
-          <section className="mt-10 space-y-3">
-            <div className="space-y-1">
-              <h2 className="text-xl font-semibold" style={{ color: 'var(--text)' }}>
-                {copy.sectionTitle}
-              </h2>
-              <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-                {copy.sectionDescription}
-              </p>
-            </div>
-
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-              {filtered.map((coin, index) => {
-                const isTop = !query.trim() && index < 3
-                const href = `${basePath}/${coin.slug}`
-
-                return (
-                  <Link
-                    key={coin.slug}
-                    href={href}
-                    onClick={() => trackEvent('coin_entry_click', { lang, coin: coin.slug, source: query.trim() ? 'search' : 'grid' })}
-                    className="flex flex-col items-start gap-2 p-4 transition"
-                    style={{
-                      background: isTop ? 'rgba(56, 189, 248, 0.05)' : 'var(--surface)',
-                      border: `1px solid ${isTop ? 'rgba(56, 189, 248, 0.2)' : 'var(--border)'}`,
-                      borderRadius: 'var(--radius-lg)',
-                    }}
-                  >
-                    <span className="font-bold text-lg" style={{ color: isTop ? 'var(--accent)' : 'var(--text)' }}>
-                      {coin.symbol}
-                    </span>
-                    <span className="text-sm" style={{ color: 'var(--text-muted)' }}>
-                      {coin.name}
-                    </span>
-                    <span className="text-[11px]" style={{ color: 'var(--text-faint)' }}>
-                      {coin.category}
-                    </span>
-                  </Link>
-                )
-              })}
-            </div>
-
-            {filtered.length === 0 && (
-              <div>
-                <NoResultsRecovery
-                  lang={lang}
-                  query={query.trim()}
-                  suggestions={copy.recoverySuggestions}
-                  onSuggestionClick={(href) => trackEvent('search_recovery_click', { lang, href, query: query.trim() })}
-                />
-              </div>
-            )}
-          </section>
-
-          <section className="mt-14 grid gap-6 lg:grid-cols-2">
-            <div
-              className="space-y-3"
-              style={{
-                background: 'var(--surface)',
-                border: '1px solid var(--border)',
-                borderRadius: 'var(--radius-lg)',
-                padding: '20px',
-              }}
-            >
-              <h2 className="text-xl font-semibold" style={{ color: 'var(--text)' }}>
-                {copy.bodyTitle}
-              </h2>
-              <p className="text-sm leading-relaxed" style={{ color: 'var(--text-muted)' }}>
-                {copy.bodyText}
-              </p>
-            </div>
-
-            <div
-              className="space-y-3"
-              style={{
-                background: 'var(--surface)',
-                border: '1px solid var(--border)',
-                borderRadius: 'var(--radius-lg)',
-                padding: '20px',
-              }}
-            >
-              <h2 className="text-xl font-semibold" style={{ color: 'var(--text)' }}>
-                {copy.featuredTitle}
-              </h2>
-              <p className="text-sm leading-relaxed" style={{ color: 'var(--text-muted)' }}>
-                {copy.featuredDescription}
-              </p>
-              <div className="flex flex-wrap gap-3 pt-1">
-                {copy.recoverySuggestions.map((item) => (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    onClick={() => trackEvent('search_recovery_click', { lang, href: item.href })}
-                    className="hover:underline text-sm"
-                    style={{ color: 'var(--accent)' }}
-                  >
-                    {item.label} →
-                  </Link>
-                ))}
-              </div>
-            </div>
-          </section>
+              {copy.legendPortfolio}
+            </span>
+            <span>
+              <span
+                style={{
+                  display: 'inline-block',
+                  width: 12,
+                  borderTop: '1px dashed var(--muted)',
+                  verticalAlign: 'middle',
+                  marginRight: 5,
+                }}
+              />
+              {copy.legendInvested}
+            </span>
+            <span style={{ marginLeft: 'auto', color: 'var(--accent)' }}>{copy.nowLabel}</span>
+          </div>
         </div>
-      </main>
-    </>
+      </div>
+
+      <div
+        style={{
+          marginTop: 18,
+          paddingTop: 14,
+          borderTop: '1px dashed var(--border)',
+          display: 'flex',
+          gap: 12,
+          flexWrap: 'wrap',
+          fontSize: 12,
+        }}
+      >
+        {copy.suggestions.map((s) => (
+          <SuggestionChip key={s} text={s} lang={lang} />
+        ))}
+      </div>
+    </Panel>
+  )
+}
+
+function HeroNumber({ value }: { value: number }) {
+  const formatted = formatUsd(value)
+  const decimalIndex = formatted.lastIndexOf('.')
+  const integerPart = decimalIndex >= 0 ? formatted.slice(0, decimalIndex) : formatted
+  const decimalPart = decimalIndex >= 0 ? formatted.slice(decimalIndex) : ''
+  return (
+    <div style={{ fontSize: 56, lineHeight: 1, letterSpacing: '-0.02em' }} className="tabular-nums">
+      {integerPart}
+      <span style={{ color: 'var(--muted)', fontSize: 22 }}>{decimalPart}</span>
+    </div>
+  )
+}
+
+function MetricGrid({ btc, lang }: { btc: HomeBtcResult; lang: 'en' | 'ko' }) {
+  const slug = btc.coin.symbol.toLowerCase()
+  const totalCoinsLabel = `${slug}_accumulated`
+  const entries: Array<[string, string]> = [
+    [lang === 'ko' ? '총_투자금' : 'total_invested', formatUsd(btc.result.totalInvested)],
+    [totalCoinsLabel, btc.result.totalCoins.toFixed(6)],
+    [lang === 'ko' ? '평균_매수단가' : 'avg_buy_price', formatUsd(btc.breakEvenPrice)],
+    [lang === 'ko' ? '손익분기' : 'breakeven_price', formatUsd(btc.breakEvenPrice)],
+    [lang === 'ko' ? '매수_횟수' : 'n_purchases', String(btc.result.purchases.length)],
+    [lang === 'ko' ? '데이터' : 'data_source', 'binance · 1d'],
+  ]
+  return (
+    <div
+      className="tabular-nums"
+      style={{
+        marginTop: 22,
+        display: 'grid',
+        gridTemplateColumns: '1fr 1fr',
+        gap: '6px 24px',
+        fontSize: 13,
+      }}
+    >
+      {entries.map(([k, v]) => (
+        <div
+          key={k}
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            borderBottom: '1px dotted var(--faint)',
+            padding: '2px 0',
+          }}
+        >
+          <span style={{ color: 'var(--muted)' }}>{k}</span>
+          <span>{v}</span>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function SuggestionChip({ text, lang }: { text: string; lang: 'en' | 'ko' }) {
+  // Best-effort mapping of `$ dca --coin=X` style suggestions to internal links.
+  const basePath = lang === 'ko' ? '/ko' : ''
+  let href: string | null = null
+  const coinMatch = text.match(/--coin=([a-z0-9]+)/)
+  const compareMatch = text.match(/^\$ compare\s+([a-z]+)\s+([a-z]+)/)
+  const taxMatch = /tax\b/.test(text)
+  const manMatch = text.match(/\$ man\s+([a-z0-9]+)\/guide/)
+
+  if (compareMatch) href = `/${compareMatch[1]}-vs-${compareMatch[2]}`
+  else if (taxMatch) href = '/ko/btc/tax'
+  else if (manMatch) href = `${basePath}/${manMatch[1]}/guide`
+  else if (coinMatch) href = `${basePath}/${coinMatch[1]}`
+
+  const chipStyle: React.CSSProperties = {
+    border: '1px solid var(--border)',
+    color: 'var(--fg-2)',
+    padding: '5px 10px',
+    background: 'var(--panel-2)',
+    fontSize: 12,
+  }
+
+  if (!href) {
+    return <span style={chipStyle}>{text}</span>
+  }
+  return (
+    <Link href={href} style={chipStyle}>
+      {text}
+    </Link>
   )
 }
