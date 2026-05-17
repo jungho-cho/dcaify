@@ -1,65 +1,113 @@
 @import "tailwindcss";
 
-/* DCAify Design System — see DESIGN.md */
+/* DCAify — Terminal theme. See DESIGN.md. */
 
 @theme inline {
-  --color-background: #0B0F19;
-  --color-foreground: #E2E8F0;
-  --font-sans: 'DM Sans', system-ui, sans-serif;
-  --font-mono: var(--font-geist-mono);
+  --color-background: #0A0A0B;
+  --color-foreground: #E6E6E6;
+  --font-sans: var(--font-jetbrains-mono);
+  --font-mono: var(--font-jetbrains-mono);
 }
 
 :root {
-  --bg: #0B0F19;
-  --surface: #141926;
-  --border: #1E293B;
-  --text: #E2E8F0;
-  --text-muted: #64748B;
-  --text-faint: #475569;
-  --accent: #38BDF8;
-  --accent-hover: #0EA5E9;
-  --profit: #34D399;
-  --profit-bg: rgba(6, 78, 59, 0.2);
-  --loss: #F87171;
-  --loss-bg: rgba(69, 10, 10, 0.2);
-  --warning: #FBBF24;
+  /* Surfaces */
+  --bg: #0A0A0B;
+  --panel: #101012;
+  --panel-2: #141416;
+  --panel-3: #181A1D;
 
-  --font-display: 'Satoshi', system-ui, sans-serif;
-  --font-body: 'DM Sans', system-ui, sans-serif;
+  /* Text */
+  --fg: #E6E6E6;
+  --fg-2: #B5B5B5;
+  --muted: #6E6E72;
+  --faint: #3F3F44;
 
-  --radius-sm: 6px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
-  --radius-xl: 16px;
+  /* Lines */
+  --border: #26262B;
+  --border-2: #1D1D21;
+
+  /* Accents */
+  --accent: #B5F23D;
+  --accent-dim: #7BA526;
+  --accent-bg: rgba(181, 242, 61, 0.10);
+
+  /* Semantic */
+  --profit: #B5F23D;
+  --loss: #FF5C44;
+  --amber: #F4B942;
+  --amber-bg: rgba(244, 185, 66, 0.12);
+  --cyan: #5BC8DB;
+  --violet: #B695F4;
+
+  /* Compat aliases for legacy components during the redesign */
+  --surface: var(--panel);
+  --text: var(--fg);
+  --text-muted: var(--muted);
+  --text-faint: var(--faint);
+  --warning: var(--amber);
 }
 
-body {
-  background: #0B0F19;
-  color: #E2E8F0;
-  font-family: 'DM Sans', system-ui, sans-serif;
+html, body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-jetbrains-mono), ui-monospace, "Menlo", monospace;
+  font-size: 13.5px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 .tabular-nums {
   font-variant-numeric: tabular-nums;
 }
 
-/* Motion — minimal-functional transitions */
+/* Cursor blink — used after editable values and at the end of $ prompts */
+@keyframes trmBlink {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+
+.trm-cursor {
+  display: inline-block;
+  background: var(--accent);
+  width: 9px;
+  height: 1em;
+  margin-left: 6px;
+  vertical-align: middle;
+  animation: trmBlink 1s steps(2) infinite;
+}
+
+/* The signature 6×6 corner marker on every primary panel. */
+.trm-corner {
+  position: relative;
+}
+
+.trm-corner::before {
+  content: "";
+  position: absolute;
+  top: -1px;
+  left: -1px;
+  width: 6px;
+  height: 6px;
+  background: var(--accent);
+}
+
+/* Minimal-functional transitions only. */
 a, button, input, select {
-  transition: color 150ms ease-out, background-color 150ms ease-out, border-color 150ms ease-out, transform 150ms ease-out, opacity 150ms ease-out;
+  transition: color 150ms ease-out, background-color 150ms ease-out, border-color 150ms ease-out;
 }
 
 a:hover {
-  color: var(--text);
+  color: var(--fg);
 }
 
-/* Subtle hover lift for card-like links */
-a[class*="block"]:hover,
-a[class*="flex"]:hover {
-  border-color: var(--accent) !important;
-}
-
-/* Focus visible for keyboard navigation */
 :focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
+}
+
+/* Selection */
+::selection {
+  background: var(--accent-bg);
+  color: var(--fg);
 }

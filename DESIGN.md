@@ -1,4 +1,4 @@
-# Design System — DCAify
+# Design System — DCAify (Terminal theme)
 
 ## Product Context
 - **What this is:** Crypto DCA (Dollar Cost Averaging) calculator with SEO content pages
@@ -7,121 +7,130 @@
 - **Project type:** Web app (calculator tool + SEO content)
 
 ## Aesthetic Direction
-- **Direction:** Industrial/Utilitarian
-- **Decoration level:** Minimal — typography and whitespace do the work
-- **Mood:** Calm, trustworthy financial tool. Not a trading dashboard, not a crypto casino. The user should feel "this is a serious tool I can trust" within 3 seconds. Long-term investing energy, not day-trading energy.
-- **Reference sites:** dcabtc.com (simplicity), wise.com (trustworthy fintech), linear.app (clean dark UI)
+- **Direction:** Brutalist / CLI-as-UI. The UI is a terminal session.
+- **Decoration level:** Zero. ASCII art for titles, monospace everywhere, sharp 90° corners. No gradients, no rounded buttons, no shadows.
+- **Mood:** "honest, fast, reproducible." A serious tool that prints what it knows and admits what it doesn't. Every input is a flag, every result is a line of output.
+- **Signature element:** A 6×6 lime square pinned to the top-left of every primary panel — the visual signature of the theme.
+- **Reference sites:** Unix man pages, htop, nnn, classic terminal IDEs.
 
 ## Typography
-- **Display/Hero:** Satoshi (Bold 700) — modern geometric sans with personality. Sharper than Inter, more memorable.
-  - Load from: `https://api.fontshare.com/v2/css?f[]=satoshi@700&display=swap`
-- **Body:** DM Sans (Regular 400, Medium 500) — clean and warm, better letter-spacing than Inter
-  - Load from: Google Fonts
-- **UI/Labels:** DM Sans (Medium 500)
-- **Data/Tables:** Geist Mono (tabular-nums) — already installed via next/font, perfect for aligned numbers
-- **Code:** Geist Mono
-- **Scale:**
-  - xs: 12px / 0.75rem
-  - sm: 14px / 0.875rem (labels, muted text)
-  - base: 16px / 1rem (body)
-  - lg: 18px / 1.125rem (subheadings)
-  - xl: 20px / 1.25rem (section titles)
-  - 2xl: 24px / 1.5rem (page titles)
-  - 3xl: 30px / 1.875rem (hero on mobile)
-  - 4xl: 36px / 2.25rem (hero on desktop)
-  - 5xl: 48px / 3rem (homepage hero)
+- **All text:** JetBrains Mono — loaded via `next/font/google` as `--font-jetbrains-mono`, weights 400/500/600/700.
+- **Fallback:** `"JetBrains Mono", ui-monospace, "Menlo", monospace`
+- **No separate display font.** "Display" treatment is large monospace + tight letter-spacing (`-0.02em` on hero numbers, `-0.01em` on h1, `+0.06em` UPPERCASE on `# section` headings).
+- **Type scale:**
+
+  | Use                          | Size      | Weight | Letter-spacing | Notes                  |
+  |------------------------------|-----------|--------|----------------|------------------------|
+  | Hero number (homepage)       | 56px      | 400    | -0.02em        | Coin page: 64–72px     |
+  | Section h1                   | 30px      | 700    | -0.01em        | Blog post title        |
+  | Section h2 (`# UPPERCASE`)   | 17px      | 400    | +0.06em        | Uppercase, lime        |
+  | Body                         | 13.5–14px | 400    | normal         | Line-height 1.65–1.75  |
+  | Table row                    | 13px      | 400    | normal         |                        |
+  | Top bar / labels             | 12px      | 400/500| normal         |                        |
+  | Hint text                    | 11px      | 400    | +0.08em        | Uppercase muted        |
 
 ## Color
-- **Approach:** Restrained — 1 accent + neutrals. Color is rare and meaningful.
-- **Background:** #0B0F19 — deep navy, not pure black (warmer, less harsh)
-- **Surface:** #141926 — cards, elevated surfaces
-- **Border:** #1E293B — slate-800, subtle separation
-- **Text primary:** #E2E8F0 — slate-200
-- **Text muted:** #64748B — slate-500
-- **Text faint:** #475569 — slate-600 (for least important info)
-- **Accent:** #38BDF8 — sky-400 (calm sky blue, NOT neon. Differentiates from purple/green crypto norm)
-- **Accent hover:** #0EA5E9 — sky-500
-- **Semantic:**
-  - Profit/Success: #34D399 (emerald-400)
-  - Profit bg: #064E3B/20 (emerald-950 at 20% opacity)
-  - Loss/Error: #F87171 (red-400)
-  - Loss bg: #450A0A/20 (red-950 at 20% opacity)
-  - Warning: #FBBF24 (amber-400)
-  - Info: #38BDF8 (same as accent)
 
-## Spacing
+Single-accent (lime) palette on near-black surfaces.
+
+| Token              | Hex                       | Use                                      |
+|--------------------|---------------------------|------------------------------------------|
+| `--bg`             | `#0A0A0B`                 | Page background (near-black)             |
+| `--panel`          | `#101012`                 | Primary panel surface                    |
+| `--panel-2`        | `#141416`                 | Nested/secondary surface                 |
+| `--panel-3`        | `#181A1D`                 | Tertiary surface                         |
+| `--fg`             | `#E6E6E6`                 | Primary text                             |
+| `--fg-2`           | `#B5B5B5`                 | Secondary text                           |
+| `--muted`          | `#6E6E72`                 | Muted text, labels                       |
+| `--faint`          | `#3F3F44`                 | Faint dividers, disabled text            |
+| `--border`         | `#26262B`                 | Primary border                           |
+| `--border-2`       | `#1D1D21`                 | Subtle border                            |
+| `--accent`         | `#B5F23D`                 | Lime — primary CTA, headings, active     |
+| `--accent-dim`     | `#7BA526`                 | Hover/pressed accent                     |
+| `--accent-bg`      | `rgba(181,242,61,0.10)`   | Accent fill for chips/highlights         |
+| `--profit`         | `#B5F23D`                 | Positive numbers (same as accent)        |
+| `--loss`           | `#FF5C44`                 | Negative numbers                         |
+| `--amber`          | `#F4B942`                 | Editable flag values, warnings, KR tax   |
+| `--amber-bg`       | `rgba(244,185,66,0.12)`   | Editable input background                |
+| `--cyan`           | `#5BC8DB`                 | Secondary chart color (ETH leg, etc.)    |
+| `--violet`         | `#B695F4`                 | Tertiary chart color                     |
+
+## Spacing & layout
 - **Base unit:** 4px
-- **Density:** Comfortable
-- **Scale:**
-  - 2xs: 2px (0.5)
-  - xs: 4px (1)
-  - sm: 8px (2)
-  - md: 16px (4)
-  - lg: 24px (6)
-  - xl: 32px (8)
-  - 2xl: 48px (12)
-  - 3xl: 64px (16)
-- **Component padding:** Cards: 20-24px. Inputs: 12px horizontal, 8px vertical. Buttons: 12-16px horizontal, 12px vertical.
+- **Container max-width:** 1280px (table layouts need room)
+- **Page padding:** `20px 36px 56px`
+- **Panel padding:** `18px 22px` (compact: `12–14px`)
+- **Section gap:** `28–32px` between major sections
+- **Grid gutter:** `8–14px` between panel cards in a row
 
-## Layout
-- **Approach:** Grid-disciplined
-- **Max content width:** 1024px (max-w-4xl for content, max-w-5xl for comparisons)
-- **Grid:** Single column for calculator pages, 2-col for comparisons (lg+), 2-4 col for coin grids
-- **Border radius:**
-  - sm: 6px (inputs, small buttons)
-  - md: 8px (badges, tags)
-  - lg: 12px (cards, sections)
-  - xl: 16px (hero cards, primary CTAs)
-  - full: 9999px (pills, avatar)
-- **Note:** NOT using rounded-2xl (16px) for everything. Cards get lg (12px), inputs get sm (6px). Hierarchy matters.
+## Borders & shape
+- **No border-radius anywhere.** Buttons, panels, chips, inputs, badges — all sharp 90° corners. Do not soften.
+- Default border: `1px solid var(--border)`
+- Section divider: `1px dashed var(--border)`
+- **Accent corner marker:** A `6×6` lime square pinned to `top:-1px; left:-1px` of every primary panel. Use the `.trm-corner` utility (the marker is rendered via `::before`).
 
 ## Motion
-- **Approach:** Minimal-functional — only transitions that aid comprehension
-- **Easing:** enter(ease-out) exit(ease-in) move(ease-in-out)
-- **Duration:** micro(50ms) short(150ms) medium(250ms)
-- **Usage:** Button hover (50ms), skeleton pulse (1s loop), chart entrance (250ms), page transitions (none, too heavy for a tool)
+- **Cursor blink only.** `@keyframes trmBlink` runs `1s steps(2) infinite` on a 9px-wide lime block after editable values and at the end of `$` prompts. Apply via `.trm-cursor`.
+- No hover animations beyond color shifts. Match the global 150ms ease-out transition on `a, button, input, select`.
 
 ## Component Patterns
 
-### Cards
-- Background: var(--surface) #141926
-- Border: 1px solid var(--border) #1E293B
-- Radius: 12px (lg)
-- Padding: 20px
-- NO shadow. Border does the separation.
+### TopBar
+Sticky line at the top of every page. Left: `● dcaify · ~/path · v0.3.1 · main` in muted, lime dot/text on `dcaify`. Right: tab list `[c]oins [d]compare [b]log [t]ax [a]bout` followed by `en|ko` toggle. Bracketed letters are real keyboard shortcuts. Active tab: lime + 600 weight. Bottom border: 1px solid `--border`, padding-bottom 12px.
 
-### Buttons
-- Primary: bg sky-400, text slate-900, hover sky-500. Radius: 12px.
-- Secondary: bg transparent, border slate-700, text slate-200, hover border sky-500. Radius: 12px.
-- Ghost: bg transparent, text slate-400, hover text white. No border.
+### AsciiHeader
+5–6 line ASCII art block in lime, 11px, line-height 1.0, `<pre>`. Followed by `# subtitle` line in muted 12px. Each page has its own ASCII string — do not regenerate, copy verbatim from the prototypes.
 
-### Inputs
-- Background: #0B0F19 (same as page bg, not card bg)
-- Border: 1px solid #1E293B
-- Radius: 6px (sm)
-- Focus: ring-2 ring-sky-500/40 border-sky-500
-- Text: slate-200, placeholder: slate-600
+### HR
+Section divider: `──── label ──────────  right`. Dashes in faint, label in lime, trailing dashes become a `1px dashed border-top` flex spacer. Optional `right` aligned text in muted.
 
-### Data Display
-- Numbers: Geist Mono, tabular-nums
-- Currency: always 2 decimal places
-- Percentage: sign prefix (+/-), 2 decimal places
-- Profit numbers: emerald-400
-- Loss numbers: red-400
+### Panel
+Primary container. `1px solid var(--border)`, `background: var(--panel)`, `padding: 18px 22px`, plus the `.trm-corner` 6×6 lime marker.
+
+### Prompt
+A `$ cmd --flag=value --flag=value ▮` line. Lime `$ ` prefix, white command, fg-2 ` --key=`, amber-on-amber-bg ` value `, blinking lime cursor at the end. Args are `[key, value]` tuples; each value can be click-to-edit.
+
+### Footer
+EOF strip — `border-top: 1px dashed var(--border)`, `padding-top: 16px`, `font-size: 11px`, faint color, flex justify-between. Left: a page-specific note. Right: `dcaify.com · binance daily closes · open source`.
+
+### Crumb
+Single line: `# cwd: /btc/guide` in muted, 12px, top margin 20px.
+
+### Cards & inputs
+- **Cards:** background `--panel`, 1px `--border`, no radius, no shadow.
+- **Buttons (primary):** background `--accent`, text `--bg`, no radius. Hover: `--accent-dim`.
+- **Buttons (secondary/chip):** background `--panel-2`, 1px `--border`, text `--fg-2`. Active: lime border + lime text.
+- **Inputs:** background `--panel-2`, 1px `--border`, text `--fg`, placeholder `--muted`. Focus: 2px `--accent` outline.
+
+### Data display
+- Numbers: JetBrains Mono (default body font), `tabular-nums`.
+- Currency: 2 decimals (`.42` in muted/22px next to the larger integer part on hero numbers).
+- Percentage: sign prefix (`+/-`), 2 decimals.
+- Profit: `--profit` (lime). Loss: `--loss` (red-orange).
+- Hero numbers split the cents into a smaller, muted span — `$24,178.42` renders integer at 56px fg, decimals at 22px muted.
+
+### Sparkline (table)
+Unicode block string (`▁▂▃▄▅▆▇█`) — 14 chars wide, `letter-spacing: -0.04em`. Lime for positive 3y DCA, red-orange for negative.
+
+### Charts
+Recharts only. Single-color line, area fill at 10% opacity, dashed reference line for cumulative invested, dotted Y-axis grid, hide the X axis except for year labels, no chart background, no default Tooltip styling.
 
 ## AI Slop Blacklist
 Do NOT use:
-- Purple/violet/indigo gradients
-- 3-column icon-in-circle feature grids
-- Centered everything with uniform spacing
-- Same border-radius on every element
-- Decorative blobs, floating circles, wavy SVG dividers
-- Generic hero copy ("Welcome to...", "Unlock the power of...")
-- Colored left-border on cards
+- Gradients of any kind. Solid colors only.
+- Border-radius. Anywhere. Sharp 90° corners only.
+- Drop shadows. Borders do the separation.
+- Icon-in-circle feature grids, decorative blobs, wavy dividers.
+- Generic hero copy ("Welcome to...", "Unlock the power of...").
+- Sky-blue (`#38BDF8`) and emerald (`#34D399`) — those are the old palette and must not return.
+- Centered everything. Tables and prompt-style inputs are left-aligned by default.
 
 ## Decisions Log
 | Date | Decision | Rationale |
 |------|----------|-----------|
-| 2026-03-27 | Initial design system | Created by /design-consultation. Industrial/Utilitarian aesthetic, sky-blue accent for trust differentiation, Satoshi + DM Sans typography |
-| 2026-03-27 | Sky blue accent over green/purple | Most crypto sites use green or purple accents. Sky blue (#38BDF8) is calmer, more trustworthy, differentiates DCAify as a "long-term investing tool" not a "trading platform" |
-| 2026-03-27 | Satoshi for display font | Sharper and more memorable than the Inter/Roboto default. Geometric but with personality. Not overused in crypto space |
+| 2026-03-27 | Initial design system (sky-blue / Satoshi / DM Sans) | First pass, industrial/utilitarian fintech |
+| 2026-05-17 | **Full redesign to Terminal theme** | Replaces sky-blue navy with near-black + lime accent, JetBrains Mono everywhere, ASCII headers, prompt-as-input, no border-radius. Doubles down on "honest, reproducible, no nonsense" positioning. Source: `design_handoff_terminal_redesign` bundle |
+| 2026-05-17 | JetBrains Mono for all text (no display font) | "Display" treatment is large monospace with tight letter-spacing. Removes the cognitive cost of mixing typefaces |
+| 2026-05-17 | Lime (`#B5F23D`) as single accent | Replaces sky-blue. Same role: signal trust + differentiation in a crypto space dominated by green and purple. Lime reads as "CLI/terminal" not "casino" |
+| 2026-05-17 | Container widened from 1024 → 1280px | Sortable coin table + delta tables need horizontal room |
+| 2026-05-17 | No border-radius anywhere | Brutalist corners are the visual signature. Soft corners would dilute the terminal aesthetic |

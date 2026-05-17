@@ -1,17 +1,13 @@
 import type { Metadata } from "next";
-import { DM_Sans, Geist_Mono } from "next/font/google";
+import { JetBrains_Mono } from "next/font/google";
 import Footer from "@/components/Footer";
 import "./globals.css";
 
-const dmSans = DM_Sans({
-  variable: "--font-geist-sans",
+const jetBrainsMono = JetBrains_Mono({
+  variable: "--font-jetbrains-mono",
   subsets: ["latin"],
-  weight: ["400", "500", "700"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -57,15 +53,10 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${dmSans.variable} ${geistMono.variable} h-full antialiased dark`}
+      className={`${jetBrainsMono.variable} h-full antialiased dark`}
     >
       <head>
-        <link
-          href="https://api.fontshare.com/v2/css?f[]=satoshi@700&display=swap"
-          rel="stylesheet"
-        />
         <meta name="naver-site-verification" content="a0f8f58a53d5fc9aee6a53b4f4b242ae061fa4a0" />
-        {/* Using the raw GA snippet here to avoid adding another dependency just for analytics bootstrapping. */}
         {/* eslint-disable-next-line @next/next/next-script-for-ga */}
         <script async src="https://www.googletagmanager.com/gtag/js?id=G-6835L1T846" />
         <script
@@ -74,10 +65,7 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body
-        className="min-h-full flex flex-col"
-        style={{ background: 'var(--bg)', color: 'var(--text)' }}
-      >
+      <body className="min-h-full flex flex-col">
         {children}
         <Footer />
       </body>
