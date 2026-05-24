@@ -14,6 +14,7 @@ import { formatPct, formatUsd } from '@/lib/formatters'
 import type { CoinConfig } from '@/lib/coins'
 import { fetchPricesForRange } from '@/lib/prices-client'
 import { isSameCoinComparison, normalizeComparisonStartDate } from '@/lib/result-interpretation'
+import { readUrlParams, useUrlSync } from '@/lib/url-sync'
 
 interface ComparisonCalculatorProps {
   leftCoin: CoinConfig
@@ -103,10 +104,27 @@ function buildSeries(result: DcaResult): { date: string; value: number; invested
 
 export default function ComparisonCalculator({ leftCoin, rightCoin, headingLevel = 'h1' }: ComparisonCalculatorProps) {
   const Heading = headingLevel
-  const [amount, setAmount] = useState('100')
-  const [frequency, setFrequency] = useState<Frequency>('monthly')
-  const [startDate, setStartDate] = useState('2020-01-01')
-  const [endDate, setEndDate] = useState(TODAY())
+  const today = TODAY()
+  const initial = useMemo(() => {
+    const params = readUrlParams()
+    const f = params.get('freq')
+    return {
+      amount: params.get('amount') ?? '100',
+      frequency: (f === 'daily' || f === 'weekly' || f === 'monthly' ? f : 'monthly') as Frequency,
+      startDate: params.get('from') ?? '2020-01-01',
+      endDate: params.get('to') ?? today,
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [leftCoin.slug, rightCoin.slug])
+  const [amount, setAmount] = useState(initial.amount)
+  const [frequency, setFrequency] = useState<Frequency>(initial.frequency)
+  const [startDate, setStartDate] = useState(initial.startDate)
+  const [endDate, setEndDate] = useState(initial.endDate)
+
+  useUrlSync(
+    { amount, freq: frequency, from: startDate, to: endDate },
+    { amount: '100', freq: 'monthly', from: '2020-01-01', to: today },
+  )
   const [uiState, setUiState] = useState<UiState>('initial')
   const [legs, setLegs] = useState<[LegOutcome, LegOutcome]>([
     { data: null, error: null },
